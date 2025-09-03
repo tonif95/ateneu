@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { Camera, CheckCircle, AlertCircle, RotateCcw, User, XCircle, UserCheck } from 'lucide-react';
+import { Camera, CheckCircle, AlertCircle, RotateCcw, User, XCircle, UserCheck, Calendar, Clock } from 'lucide-react';
 
 interface CaptureState {
   status: 'idle' | 'camera-active' | 'capturing' | 'sending' | 'success' | 'error' | 'user-found' | 'user-not-found' | 'no-face';
@@ -8,6 +8,18 @@ interface CaptureState {
     personId?: string;
     similarity?: number;
     confidence?: number;
+    scheduleData?: {
+      PatientID: string;
+      Nombre: string;
+      Lunes?: string;
+      Martes?: string;
+      Miércoles?: string;
+      Jueves?: string;
+      Viernes?: string;
+      Sábado?: string;
+      Domingo?: string;
+      [key: string]: any;
+    };
     ui?: {
       title: string;
       subtitle: string;
@@ -161,6 +173,26 @@ function App() {
     setCaptureState({ status: 'idle', message: '' });
   }, [stopCamera]);
 
+  const getCurrentDay = () => {
+    const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const today = new Date();
+    return days[today.getDay()];
+  };
+
+  const parseActivities = (activitiesString: string) => {
+    if (!activitiesString || activitiesString.toLowerCase().includes('descanso')) {
+      return [];
+    }
+    
+    return activitiesString.split(',').map(activity => {
+      const [time, ...descParts] = activity.trim().split('-');
+      return {
+        time: time.trim(),
+        description: descParts.join('-').trim()
+      };
+    }).filter(activity => activity.time && activity.description);
+  };
+
   const getStatusColor = () => {
     switch (captureState.status) {
       case 'user-found': return 'text-green-600';
@@ -251,39 +283,133 @@ function App() {
                 {getStatusIcon()}
               </div>
               
-              {captureState.recognitionData?.ui ? (
-                <div>
+              {captureState.status === 'user-found' && captureState.recognitionData?.scheduleData ? (
+                <div className="max-w-4xl">
                   <h2 className={`text-3xl font-bold mb-2 ${getStatusColor()}`}>
-                    {captureState.recognitionData.ui.title}
+                    ¡Hola {captureState.recognitionData.scheduleData.Nombre}!
                   </h2>
-                  <p className={`text-xl mb-4 ${getStatusColor()}`}>
-                    {captureState.recognitionData.ui.subtitle}
+                  <p className={`text-xl mb-6 ${getStatusColor()}`}>
+                    Paciente ID: {captureState.recognitionData.scheduleData.PatientID} • {getCurrentDay()}
                   </p>
                   
-                  {captureState.status === 'user-found' && captureState.recognitionData.similarity && (
-                    <div className="bg-white rounded-2xl p-4 mt-4 shadow-inner">
-                      <div className="text-sm text-gray-600 mb-2">Detalles del reconocimiento:</div>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="font-semibold">Similitud:</span>
-                          <div className="text-2xl font-bold text-green-600">
-                            {captureState.recognitionData.similarity}%
+                  {/* Horario del día actual */}
+                  <div className="bg-white rounded-2xl p-6 mb-6 shadow-inner text-left">
+                    <div className="flex items-center mb-4">
+                      <Calendar className="w-6 h-6 text-blue-600 mr-2" />
+                      <h3 className="text-2xl font-bold text-gray-800">Horario de Hoy - {getCurrentDay()}</h3>
+                    </div>
+                    
+                    {(() => {
+                      const currentDay = getCurrentDay();
+                      const todayActivities = captureState.recognitionData?.scheduleData?.[currentDay];
+                      const activities = parseActivities(todayActivities || '');
+                      
+                      if (activities.length === 0) {
+                        return (
+                          <div className="text-center py-8">
+                            <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                            <p className="text-xl text-gray-600">Hoy es tu día de descanso</p>
+                            <p className="text-gray-500">¡Disfruta tu tiempo libre!</p>
                           </div>
+                        );
+                      }
+                      
+                      return (
+                        <div className="space-y-3">
+                          {activities.map((activity, index) => (
+                            <div key={index} className="flex items-center p-4 bg-blue-50 rounded-xl border border-blue-200">
+                              <Clock className="w-6 h-6 text-blue-600 mr-4 flex-shrink-0" />
+                              <div>
+                                <div className="text-2xl font-bold text-blue-800">{activity.time}</div>
+                                <div className="text-lg text-gray-700">{activity.description}</div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                        <div>
-                          <span className="font-semibold">Confianza:</span>
-                          <div className="text-2xl font-bold text-green-600">
-                            {captureState.recognitionData.confidence}%
+                      );
+                    })()}
+                  </div>
+
+                  {/* Horario semanal completo */}
+                  <div className="bg-gray-50 rounded-2xl p-6 shadow-inner text-left">
+                    <h3 className="text-xl font-bold text-gray-800 mb-4 text-center">Horario Semanal Completo</h3>
+                    <div className="grid gap-3">
+                      {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(day => {
+                        const dayActivities = captureState.recognitionData?.scheduleData?.[day];
+                        const activities = parseActivities(dayActivities || '');
+                        const isToday = day === getCurrentDay();
+                        
+                        return (
+                          <div 
+                            key={day} 
+                            className={`p-4 rounded-lg border-2 ${
+                              isToday 
+                                ? 'bg-blue-100 border-blue-300' 
+                                : 'bg-white border-gray-200'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <h4 className={`font-bold text-lg ${
+                                isToday ? 'text-blue-800' : 'text-gray-700'
+                              }`}>
+                                {day} {isToday && '(HOY)'}
+                              </h4>
+                              <span className="text-sm text-gray-500">
+                                {activities.length} actividades
+                              </span>
+                            </div>
+                            {activities.length > 0 ? (
+                              <div className="mt-2 space-y-1">
+                                {activities.map((activity, idx) => (
+                                  <div key={idx} className="text-sm text-gray-600">
+                                    <span className="font-semibold">{activity.time}</span> - {activity.description}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="mt-2 text-sm text-gray-500 italic">Día de descanso</div>
+                            )}
                           </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Estadísticas de reconocimiento */}
+                  <div className="bg-white rounded-2xl p-4 mt-6 shadow-inner">
+                    <div className="text-sm text-gray-600 mb-2">Datos del reconocimiento facial:</div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="font-semibold">Similitud:</span>
+                        <div className="text-lg font-bold text-green-600">
+                          {captureState.recognitionData.similarity}%
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-semibold">Confianza:</span>
+                        <div className="text-lg font-bold text-green-600">
+                          {captureState.recognitionData.confidence}%
                         </div>
                       </div>
                     </div>
-                  )}
+                  </div>
                 </div>
               ) : (
-                <p className={`text-2xl font-semibold ${getStatusColor()}`}>
-                  {captureState.message || 'Listo para comenzar'}
-                </p>
+                <div>
+                  {captureState.recognitionData?.ui && (
+                    <>
+                      <h2 className={`text-3xl font-bold mb-2 ${getStatusColor()}`}>
+                        {captureState.recognitionData.ui.title}
+                      </h2>
+                      <p className={`text-xl mb-4 ${getStatusColor()}`}>
+                        {captureState.recognitionData.ui.subtitle}
+                      </p>
+                    </>
+                  )}
+                  <p className={`text-2xl font-semibold ${getStatusColor()}`}>
+                    {captureState.message || 'Listo para comenzar'}
+                  </p>
+                </div>
               )}
             </div>
           </div>
@@ -354,7 +480,7 @@ function App() {
             </div>
             <div className="flex items-center gap-3">
               <span className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">3</span>
-              <span>Toque "Tomar Foto" para el reconocimiento facial</span>
+              <span>Toque "Tomar Foto" para ver sus horarios de rehabilitación</span>
             </div>
           </div>
         </div>
