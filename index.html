@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#2563EB" />
+    <meta name="description" content="Asistente personalizado para pacientes con daño cerebral en rehabilitación" />
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Rehabilitación" />
+    
+    <!-- Accessibility -->
+    <meta name="color-scheme" content="light" />
+    
+    <title>Asistente de Rehabilitación</title>
+    
+    <style>
+      /* Prevent zoom on touch devices */
+      * {
+        touch-action: manipulation;
+      }
+      
+      /* High contrast focus indicators */
+      *:focus {
+        outline: 3px solid #2563EB !important;
+        outline-offset: 2px !important;
+      }
+      
+      /* Ensure minimum touch target size */
+      button, input, select, textarea {
+        min-height: 44px;
+        min-width: 44px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

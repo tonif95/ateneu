@@ -1,0 +1,28 @@
+{
+  "name": "Asistente de Rehabilitación",
+  "short_name": "Rehabilitación",
+  "description": "Asistente personalizado para pacientes con daño cerebral",
+  "theme_color": "#2563EB",
+  "background_color": "#EFF6FF",
+  "display": "standalone",
+  "orientation": "landscape-primary",
+  "start_url": "/",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["medical", "health", "accessibility"],
+  "lang": "es",
+  "dir": "ltr"
+}
