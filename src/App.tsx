@@ -224,6 +224,9 @@ function App() {
     }
   };
 
+  // Determinar si mostrar la cámara
+  const shouldShowCamera = ['idle', 'camera-active', 'capturing', 'sending'].includes(captureState.status);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
       <div className="max-w-4xl mx-auto">
@@ -244,37 +247,39 @@ function App() {
 
         {/* Main Content */}
         <div className="bg-white rounded-3xl shadow-2xl p-8 mb-6">
-          {/* Camera Section */}
-          <div className="relative mb-8">
-            <div className="aspect-video bg-gray-100 rounded-2xl overflow-hidden border-4 border-gray-200 relative">
-              {captureState.status === 'camera-active' || captureState.status === 'capturing' ? (
-                <video
-                  ref={videoRef}
-                  className="w-full h-full object-cover"
-                  autoPlay
-                  playsInline
-                  muted
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <div className="text-center">
-                    <Camera className="w-24 h-24 text-gray-400 mx-auto mb-4" />
-                    <p className="text-2xl text-gray-500 font-medium">
-                      Cámara inactiva
-                    </p>
+          {/* Camera Section - Solo se muestra cuando es necesario */}
+          {shouldShowCamera && (
+            <div className="relative mb-8">
+              <div className="aspect-video bg-gray-100 rounded-2xl overflow-hidden border-4 border-gray-200 relative">
+                {captureState.status === 'camera-active' || captureState.status === 'capturing' ? (
+                  <video
+                    ref={videoRef}
+                    className="w-full h-full object-cover"
+                    autoPlay
+                    playsInline
+                    muted
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <div className="text-center">
+                      <Camera className="w-24 h-24 text-gray-400 mx-auto mb-4" />
+                      <p className="text-2xl text-gray-500 font-medium">
+                        Cámara inactiva
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )}
-              
-              {captureState.status === 'capturing' && (
-                <div className="absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center">
-                  <div className="bg-blue-600 text-white px-6 py-3 rounded-full text-xl font-semibold">
-                    📸 Capturando...
+                )}
+                
+                {captureState.status === 'capturing' && (
+                  <div className="absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center">
+                    <div className="bg-blue-600 text-white px-6 py-3 rounded-full text-xl font-semibold">
+                      📸 Capturando...
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Status Message */}
           <div className="text-center mb-8">
@@ -577,26 +582,28 @@ function App() {
           </div>
         </div>
 
-        {/* Instructions */}
-        <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6">
-          <h2 className="text-2xl font-bold text-blue-800 mb-4 text-center">
-            Instrucciones
-          </h2>
-          <div className="space-y-3 text-lg text-blue-700">
-            <div className="flex items-center gap-3">
-              <span className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">1</span>
-              <span>Toque "Activar Cámara" para comenzar</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">2</span>
-              <span>Posicione su rostro frente a la cámara</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">3</span>
-              <span>Toque "Tomar Foto" para ver sus horarios de rehabilitación</span>
+        {/* Instructions - Solo se muestran cuando no hay resultados */}
+        {shouldShowCamera && (
+          <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6">
+            <h2 className="text-2xl font-bold text-blue-800 mb-4 text-center">
+              Instrucciones
+            </h2>
+            <div className="space-y-3 text-lg text-blue-700">
+              <div className="flex items-center gap-3">
+                <span className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">1</span>
+                <span>Toque "Activar Cámara" para comenzar</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">2</span>
+                <span>Posicione su rostro frente a la cámara</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">3</span>
+                <span>Toque "Tomar Foto" para ver sus horarios de rehabilitación</span>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         <canvas ref={canvasRef} className="hidden" />
       </div>
