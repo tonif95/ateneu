@@ -289,14 +289,87 @@ function App() {
                     ¡Hola {captureState.recognitionData.scheduleData.Nombre}!
                   </h2>
                   <p className={`text-xl mb-6 ${getStatusColor()}`}>
-                    Paciente ID: {captureState.recognitionData.scheduleData.PatientID} • {getCurrentDay()}
+                    {captureState.recognitionData?.currentContext?.statusInfo || `Paciente ID: ${captureState.recognitionData.scheduleData.PatientID} • ${getCurrentDay()}`}
                   </p>
+
+                  {/* Mensaje contextual principal */}
+                  <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-2xl p-6 mb-6 border-l-4 border-blue-500">
+                    <div className="flex items-center mb-3">
+                      <Clock className="w-8 h-8 text-blue-600 mr-3" />
+                      <h3 className="text-2xl font-bold text-blue-800">Información Actual</h3>
+                    </div>
+                    <p className="text-lg text-blue-900 leading-relaxed">
+                      {captureState.message}
+                    </p>
+                  </div>
+
+                  {/* Panel de actividad actual/próxima */}
+                  {captureState.recognitionData.currentContext && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                      {captureState.recognitionData.currentContext.currentActivity && (
+                        <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4">
+                          <div className="flex items-center mb-2">
+                            <div className="w-3 h-3 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+                            <h4 className="font-bold text-green-800">ACTIVIDAD ACTUAL</h4>
+                          </div>
+                          <p className="text-2xl font-bold text-green-700">
+                            {captureState.recognitionData.currentContext.currentActivity.time}
+                          </p>
+                          <p className="text-green-800">
+                            {captureState.recognitionData.currentContext.currentActivity.description}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {captureState.recognitionData.currentContext.nextActivity && (
+                        <div className="bg-orange-50 border-2 border-orange-300 rounded-xl p-4">
+                          <div className="flex items-center mb-2">
+                            <Clock className="w-4 h-4 text-orange-600 mr-2" />
+                            <h4 className="font-bold text-orange-800">PRÓXIMA ACTIVIDAD</h4>
+                          </div>
+                          <p className="text-2xl font-bold text-orange-700">
+                            {captureState.recognitionData.currentContext.nextActivity.time}
+                          </p>
+                          <p className="text-orange-800">
+                            {captureState.recognitionData.currentContext.nextActivity.description}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Resumen del día */}
+                  {captureState.recognitionData.currentContext && (
+                    <div className="bg-gray-50 rounded-2xl p-4 mb-6 shadow-inner">
+                      <h3 className="text-lg font-bold text-gray-800 mb-3">Resumen de Hoy</h3>
+                      <div className="grid grid-cols-3 gap-4 text-center">
+                        <div>
+                          <div className="text-2xl font-bold text-blue-600">
+                            {captureState.recognitionData.currentContext.totalActivitiesToday}
+                          </div>
+                          <div className="text-sm text-gray-600">Total</div>
+                        </div>
+                        <div>
+                          <div className="text-2xl font-bold text-green-600">
+                            {captureState.recognitionData.currentContext.completedToday}
+                          </div>
+                          <div className="text-sm text-gray-600">Completadas</div>
+                        </div>
+                        <div>
+                          <div className="text-2xl font-bold text-orange-600">
+                            {captureState.recognitionData.currentContext.upcomingToday}
+                          </div>
+                          <div className="text-sm text-gray-600">Pendientes</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   
                   {/* Horario del día actual */}
                   <div className="bg-white rounded-2xl p-6 mb-6 shadow-inner text-left">
                     <div className="flex items-center mb-4">
                       <Calendar className="w-6 h-6 text-blue-600 mr-2" />
-                      <h3 className="text-2xl font-bold text-gray-800">Horario de Hoy - {getCurrentDay()}</h3>
+                      <h3 className="text-2xl font-bold text-gray-800">Horario Detallado - {getCurrentDay()}</h3>
                     </div>
                     
                     {(() => {
@@ -313,27 +386,78 @@ function App() {
                           </div>
                         );
                       }
+
+                      const currentTime = new Date();
+                      const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
                       
                       return (
                         <div className="space-y-3">
-                          {activities.map((activity, index) => (
-                            <div key={index} className="flex items-center p-4 bg-blue-50 rounded-xl border border-blue-200">
-                              <Clock className="w-6 h-6 text-blue-600 mr-4 flex-shrink-0" />
-                              <div>
-                                <div className="text-2xl font-bold text-blue-800">{activity.time}</div>
-                                <div className="text-lg text-gray-700">{activity.description}</div>
+                          {activities.map((activity, index) => {
+                            const [hours, minutes] = activity.time.split(':').map(Number);
+                            const activityMinutes = hours * 60 + minutes;
+                            const isPast = activityMinutes < currentMinutes;
+                            const isCurrent = Math.abs(currentMinutes - activityMinutes) <= 30 && currentMinutes >= activityMinutes - 15;
+                            
+                            return (
+                              <div 
+                                key={index} 
+                                className={`flex items-center p-4 rounded-xl border-2 ${
+                                  isCurrent 
+                                    ? 'bg-green-100 border-green-300 shadow-lg' 
+                                    : isPast 
+                                      ? 'bg-gray-100 border-gray-300' 
+                                      : 'bg-blue-50 border-blue-200'
+                                }`}
+                              >
+                                <Clock className={`w-6 h-6 mr-4 flex-shrink-0 ${
+                                  isCurrent 
+                                    ? 'text-green-600' 
+                                    : isPast 
+                                      ? 'text-gray-500' 
+                                      : 'text-blue-600'
+                                }`} />
+                                <div className="flex-grow">
+                                  <div className={`text-2xl font-bold ${
+                                    isCurrent 
+                                      ? 'text-green-800' 
+                                      : isPast 
+                                        ? 'text-gray-600' 
+                                        : 'text-blue-800'
+                                  }`}>
+                                    {activity.time}
+                                  </div>
+                                  <div className={`text-lg ${
+                                    isCurrent 
+                                      ? 'text-green-700' 
+                                      : isPast 
+                                        ? 'text-gray-600' 
+                                        : 'text-gray-700'
+                                  }`}>
+                                    {activity.description}
+                                  </div>
+                                </div>
+                                {isCurrent && (
+                                  <div className="text-green-600 font-bold text-lg">
+                                    ● AHORA
+                                  </div>
+                                )}
+                                {isPast && (
+                                  <div className="text-gray-500 font-medium text-sm">
+                                    ✓ Completada
+                                  </div>
+                                )}
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       );
                     })()}
                   </div>
 
-                  {/* Horario semanal completo */}
+                  {/* Horario semanal completo - simplificado */}
                   <div className="bg-gray-50 rounded-2xl p-6 shadow-inner text-left">
-                    <h3 className="text-xl font-bold text-gray-800 mb-4 text-center">Horario Semanal Completo</h3>
-                    <div className="grid gap-3">
+                    <h3 className="text-xl font-bold text-gray-800 mb-4 text-center">Horario Semanal</h3>
+                    <div className="grid gap-2">
                       {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(day => {
                         const dayActivities = captureState.recognitionData?.scheduleData?.[day];
                         const activities = parseActivities(dayActivities || '');
@@ -342,14 +466,14 @@ function App() {
                         return (
                           <div 
                             key={day} 
-                            className={`p-4 rounded-lg border-2 ${
+                            className={`p-3 rounded-lg border ${
                               isToday 
-                                ? 'bg-blue-100 border-blue-300' 
+                                ? 'bg-blue-100 border-blue-300 font-semibold' 
                                 : 'bg-white border-gray-200'
                             }`}
                           >
                             <div className="flex items-center justify-between">
-                              <h4 className={`font-bold text-lg ${
+                              <h4 className={`font-bold ${
                                 isToday ? 'text-blue-800' : 'text-gray-700'
                               }`}>
                                 {day} {isToday && '(HOY)'}
@@ -358,17 +482,6 @@ function App() {
                                 {activities.length} actividades
                               </span>
                             </div>
-                            {activities.length > 0 ? (
-                              <div className="mt-2 space-y-1">
-                                {activities.map((activity, idx) => (
-                                  <div key={idx} className="text-sm text-gray-600">
-                                    <span className="font-semibold">{activity.time}</span> - {activity.description}
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="mt-2 text-sm text-gray-500 italic">Día de descanso</div>
-                            )}
                           </div>
                         );
                       })}
@@ -377,7 +490,7 @@ function App() {
 
                   {/* Estadísticas de reconocimiento */}
                   <div className="bg-white rounded-2xl p-4 mt-6 shadow-inner">
-                    <div className="text-sm text-gray-600 mb-2">Datos del reconocimiento facial:</div>
+                    <div className="text-sm text-gray-600 mb-2">Datos del reconocimiento:</div>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <span className="font-semibold">Similitud:</span>
