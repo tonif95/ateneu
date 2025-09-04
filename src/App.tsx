@@ -137,7 +137,6 @@ function App() {
 
       if (response.ok) {
         const result = await response.json();
-        // Si la respuesta es un array, tomamos el primer elemento
         const resultData = Array.isArray(result) ? result[0] : result;
         handleRecognitionResult(resultData);
         stopCamera();
@@ -203,7 +202,6 @@ function App() {
     return days[today.getDay()];
   };
 
-  // ==== PARSE ACTIVITIES (mejorado: soporta "actividad - sala") ====
   const parseActivities = (activitiesString: string) => {
     if (!activitiesString || activitiesString.toLowerCase().includes('descanso')) {
       return [];
@@ -213,12 +211,9 @@ function App() {
       .split(',')
       .map((raw) => raw.trim())
       .map((entry) => {
-        // formatos:
-        // "09:00-Fisioterapia"
-        // "09:30-Hidroterapia-Sala A"
         const [timePart, ...rest] = entry.split('-');
         const time = timePart?.trim();
-        const desc = rest.join('-').trim(); // "Hidroterapia-Sala A" o "Fisioterapia"
+        const desc = rest.join('-').trim();
 
         let activityName = desc;
         let room: string | undefined = undefined;
@@ -228,7 +223,7 @@ function App() {
           const last = parts[parts.length - 1];
           if (/^sala\b/i.test(last)) {
             room = last;
-            activityName = parts.slice(0, -1).join(' - ');
+            activityName = parts.slice(0, -1).join(' ').trim();
           }
         }
 
@@ -238,7 +233,6 @@ function App() {
       .filter((a) => a.time && a.activityName);
   };
 
-  // ==== RESOLVER DE IMÁGENES ====
   const activityImageMap: Record<string, string> = {
     'fisioterapia': 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop',
     'terapia ocupacional': 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?w=400&h=300&fit=crop',
@@ -267,7 +261,6 @@ function App() {
     return { activityImage, roomImage };
   }
 
-  // ==== INFERENCIA DE ACTIVIDAD/SALA DESDE EL HORARIO ====
   function inferContextFromSchedule(
     scheduleData: any,
     dayName: string,
@@ -287,6 +280,8 @@ function App() {
 
     for (let i = 0; i < activities.length; i++) {
       const a = activities[i];
+      if (!a.time) continue;
+      
       const [h, m] = a.time.split(':').map(Number);
       const t = h * 60 + m;
 
@@ -294,17 +289,29 @@ function App() {
       if (isCurrent && !current) {
         current = { ...a };
       }
-      if (t > nowMin) {
+      
+      if (t > nowMin && !next) {
         next = { ...a };
-        break;
       }
     }
 
-    if (!current && !next) {
-      const last = activities[activities.length - 1];
-      const [h, m] = last.time.split(':').map(Number);
-      const t = h * 60 + m;
-      if (t <= nowMin) current = { ...last };
+    if (!current && activities.length > 0) {
+      const sortedActivities = activities.sort((a, b) => {
+        const [ah, am] = a.time.split(':').map(Number);
+        const [bh, bm] = b.time.split(':').map(Number);
+        const aMin = ah * 60 + am;
+        const bMin = bh * 60 + bm;
+        return Math.abs(nowMin - aMin) - Math.abs(nowMin - bMin);
+      });
+      
+      const closest = sortedActivities[0];
+      if (closest) {
+        const [h, m] = closest.time.split(':').map(Number);
+        const t = h * 60 + m;
+        if (Math.abs(nowMin - t) <= 120) {
+          current = { ...closest };
+        }
+      }
     }
 
     return { currentActivity: current, nextActivity: next };
@@ -322,12 +329,12 @@ function App() {
 
   const getStatusIcon = () => {
     switch (captureState.status) {
-      case 'user-found': return <UserCheck className="w-12 h-12" />;
-      case 'user-not-found': return <AlertCircle className="w-12 h-12" />;
-      case 'no-face': return <XCircle className="w-12 h-12" />;
-      case 'error': return <AlertCircle className="w-12 h-12" />;
-      case 'camera-active': return <Camera className="w-12 h-12" />;
-      default: return <User className="w-12 h-12" />;
+      case 'user-found': return <UserCheck className="w-8 h-8 sm:w-12 sm:h-12" />;
+      case 'user-not-found': return <AlertCircle className="w-8 h-8 sm:w-12 sm:h-12" />;
+      case 'no-face': return <XCircle className="w-8 h-8 sm:w-12 sm:h-12" />;
+      case 'error': return <AlertCircle className="w-8 h-8 sm:w-12 sm:h-12" />;
+      case 'camera-active': return <Camera className="w-8 h-8 sm:w-12 sm:h-12" />;
+      default: return <User className="w-8 h-8 sm:w-12 sm:h-12" />;
     }
   };
 
@@ -341,33 +348,32 @@ function App() {
     }
   };
 
-  // Determinar si mostrar la cámara
   const shouldShowCamera = ['idle', 'camera-active', 'capturing', 'sending'].includes(captureState.status);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-3 sm:p-6">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-4">
-            <div className="bg-blue-600 p-4 rounded-full shadow-lg">
-              <User className="w-12 h-12 text-white" />
+        {/* Header - Optimizado para móvil */}
+        <div className="text-center mb-4 sm:mb-8">
+          <div className="flex items-center justify-center mb-3 sm:mb-4">
+            <div className="bg-blue-600 p-3 sm:p-4 rounded-full shadow-lg">
+              <User className="w-8 h-8 sm:w-12 sm:h-12 text-white" />
             </div>
           </div>
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">
+          <h1 className="text-xl sm:text-4xl font-bold text-gray-800 mb-2">
             Asistente de Rehabilitación
           </h1>
-          <p className="text-xl text-gray-600">
+          <p className="text-sm sm:text-xl text-gray-600">
             Sistema de Reconocimiento Facial
           </p>
         </div>
 
         {/* Main Content */}
-        <div className="bg-white rounded-3xl shadow-2xl p-8 mb-6">
-          {/* Camera Section - Solo se muestra cuando es necesario */}
+        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-8 mb-4 sm:mb-6">
+          {/* Camera Section - Optimizado para móvil */}
           {shouldShowCamera && (
-            <div className="relative mb-8">
-              <div className="aspect-video bg-gray-100 rounded-2xl overflow-hidden border-4 border-gray-200 relative">
+            <div className="relative mb-4 sm:mb-8">
+              <div className="aspect-video bg-gray-100 rounded-xl sm:rounded-2xl overflow-hidden border-2 sm:border-4 border-gray-200 relative">
                 {(captureState.status === 'camera-active' || captureState.status === 'capturing') ? (
                   <video
                     ref={videoRef}
@@ -379,8 +385,8 @@ function App() {
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <div className="text-center">
-                      <Camera className="w-24 h-24 text-gray-400 mx-auto mb-4" />
-                      <p className="text-2xl text-gray-500 font-medium">
+                      <Camera className="w-16 h-16 sm:w-24 sm:h-24 text-gray-400 mx-auto mb-4" />
+                      <p className="text-lg sm:text-2xl text-gray-500 font-medium">
                         Cámara inactiva
                       </p>
                     </div>
@@ -389,7 +395,7 @@ function App() {
                 
                 {captureState.status === 'capturing' && (
                   <div className="absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center">
-                    <div className="bg-blue-600 text-white px-6 py-3 rounded-full text-xl font-semibold">
+                    <div className="bg-blue-600 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-full text-base sm:text-xl font-semibold">
                       📸 Capturando...
                     </div>
                   </div>
@@ -399,139 +405,149 @@ function App() {
           )}
 
           {/* Status Message */}
-          <div className="text-center mb-8">
-            <div className={`inline-block p-8 rounded-3xl border-2 ${getStatusBackground()}`}>
-              <div className={`flex items-center justify-center mb-4 ${getStatusColor()}`}>
+          <div className="text-center mb-4 sm:mb-8">
+            <div className={`inline-block p-4 sm:p-8 rounded-2xl sm:rounded-3xl border-2 ${getStatusBackground()}`}>
+              <div className={`flex items-center justify-center mb-3 sm:mb-4 ${getStatusColor()}`}>
                 {getStatusIcon()}
               </div>
               
               {captureState.status === 'user-found' && captureState.recognitionData?.scheduleData ? (
                 <div className="max-w-4xl">
-                  <h2 className={`text-3xl font-bold mb-2 ${getStatusColor()}`}>
+                  <h2 className={`text-lg sm:text-3xl font-bold mb-2 ${getStatusColor()}`}>
                     ¡Hola {captureState.recognitionData.scheduleData.Nombre}!
                   </h2>
-                  <p className={`text-xl mb-6 ${getStatusColor()}`}>
+                  <p className={`text-sm sm:text-xl mb-4 sm:mb-6 ${getStatusColor()}`}>
                     {(() => {
-                      const statusInfo = captureState.recognitionData?.currentContext?.statusInfo;
-                      if (statusInfo && !statusInfo.includes('undefined')) {
-                        return statusInfo;
+                      const ctxBackend = captureState.recognitionData?.currentContext;
+                      const scheduleData = captureState.recognitionData?.scheduleData;
+                      const day = ctxBackend?.day || getCurrentDay();
+                      
+                      // Obtener actividad objetivo del backend
+                      let targetActivity = ctxBackend?.currentActivity || ctxBackend?.nextActivity;
+                      let activityName = '';
+                      let targetRoom = '';
+                      let activityTime = '';
+
+                      if (targetActivity && targetActivity.description) {
+                        const desc = targetActivity.description;
+                        const parts = desc.split('-');
+                        
+                        if (parts.length >= 2 && parts[parts.length - 1].toLowerCase().includes('sala')) {
+                          activityName = parts.slice(0, -1).join('-').trim();
+                          targetRoom = parts[parts.length - 1].trim();
+                        } else {
+                          activityName = desc;
+                        }
+                        
+                        activityTime = targetActivity.time || '';
+                        
+                        return targetActivity ? 
+                          `Próxima actividad: ${activityName} - ${activityTime}` :
+                          `Paciente ID: ${captureState.recognitionData.scheduleData.PatientID} • ${getCurrentDay()}`;
                       }
-                      // Si hay próxima actividad, construir un mensaje adecuado
-                      const nextActivity = captureState.recognitionData?.currentContext?.nextActivity;
-                      if (nextActivity) {
-                        const actName = nextActivity.activityName || nextActivity.description?.split('-')[0]?.trim() || 'Actividad';
-                        return `Próxima actividad: ${actName} - ${nextActivity.time || ''}`;
-                      }
+                      
                       return `Paciente ID: ${captureState.recognitionData.scheduleData.PatientID} • ${getCurrentDay()}`;
                     })()}
                   </p>
 
-                  {/* === TARJETAS: ACTIVIDAD y SALA === */}
+                  {/* === TARJETAS: ACTIVIDAD y SALA - Optimizadas para móvil === */}
                   {(() => {
                     const ctxBackend = captureState.recognitionData?.currentContext;
+                    const scheduleData = captureState.recognitionData?.scheduleData;
                     const day = ctxBackend?.day || getCurrentDay();
-                    const hasActivities = !!(ctxBackend?.currentActivity || ctxBackend?.nextActivity);
-
-                    let targetActivity = null;
+                    
+                    // Obtener actividad objetivo del backend
+                    let targetActivity = ctxBackend?.currentActivity || ctxBackend?.nextActivity;
+                    let activityName = '';
                     let targetRoom = '';
+                    let activityTime = '';
 
-                    if (hasActivities) {
-                      // Usar datos del backend
-                      targetActivity = ctxBackend?.currentActivity || ctxBackend?.nextActivity;
-                      // Obtener la sala del targetActivity o inferirla desde la descripción
-                      if (targetActivity) {
-                        targetRoom = targetActivity.room || '';
-                        // Si no hay sala pero hay descripción, intentar extraerla
-                        if (!targetRoom && targetActivity.description) {
-                          const parts = targetActivity.description.split('-').map(p => p.trim());
-                          const lastPart = parts[parts.length - 1];
-                          if (lastPart && /^sala\s/i.test(lastPart)) {
-                            targetRoom = lastPart;
-                          }
-                        }
+                    if (targetActivity && targetActivity.description) {
+                      const desc = targetActivity.description;
+                      const parts = desc.split('-');
+                      
+                      if (parts.length >= 2 && parts[parts.length - 1].toLowerCase().includes('sala')) {
+                        activityName = parts.slice(0, -1).join('-').trim();
+                        targetRoom = parts[parts.length - 1].trim();
+                      } else {
+                        activityName = desc;
                       }
+                      
+                      activityTime = targetActivity.time || '';
                     } else {
-                      // Inferir desde el horario
-                      const inferred = inferContextFromSchedule(captureState.recognitionData?.scheduleData, day);
-                      targetActivity = inferred.currentActivity || inferred.nextActivity;
-                      targetRoom = targetActivity?.room || '';
+                      const todaySchedule = scheduleData?.[day] || '';
+                      const activities = parseActivities(todaySchedule);
+                      if (activities.length > 0) {
+                        const firstActivity = activities[0];
+                        activityName = firstActivity.activityName || '';
+                        targetRoom = firstActivity.room || '';
+                        activityTime = firstActivity.time || '';
+                      }
                     }
 
-                    const showActivity = !!targetActivity;
-                    const { activityImage, roomImage } = resolveImages(targetActivity, targetRoom);
+                    const showActivity = !!activityName;
+                    const { activityImage, roomImage } = resolveImages({ activityName }, targetRoom);
 
                     return (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                        {/* Tarjeta Actividad */}
-                        <div className="bg-white border-2 border-gray-200 rounded-2xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6 mb-4 sm:mb-8">
+                        {/* Tarjeta Actividad - Móvil optimizada */}
+                        <div className="bg-white border border-gray-200 sm:border-2 rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg overflow-hidden">
                           <div className="relative aspect-[16/10] bg-gray-100 overflow-hidden">
                             <img
                               src={activityImage}
-                              alt={targetActivity?.activityName || 'Actividad'}
-                              className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                              alt={activityName || 'Actividad'}
+                              className="w-full h-full object-cover"
                               onError={(e) => {
                                 e.currentTarget.src = 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop';
                               }}
                             />
-                            {showActivity && targetActivity?.time && (
-                              <div className="absolute top-3 right-3 bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                                {targetActivity.time}
+                            {showActivity && activityTime && (
+                              <div className="absolute top-2 right-2 bg-blue-600 text-white px-2 py-1 rounded-full text-xs sm:text-sm font-semibold">
+                                {activityTime}
                               </div>
                             )}
                           </div>
-                          <div className="p-6">
-                            <div className="text-sm font-semibold text-blue-600 uppercase tracking-wide mb-2">
+                          <div className="p-3 sm:p-6">
+                            <div className="text-xs sm:text-sm font-semibold text-blue-600 uppercase tracking-wide mb-1 sm:mb-2">
                               ACTIVIDAD
                             </div>
-                            <div className="text-2xl font-bold text-gray-900 mb-2">
-                              {showActivity ? (() => {
-                                // Extraer solo el nombre de la actividad, sin la sala
-                                const actName = targetActivity.activityName || '';
-                                const desc = targetActivity.description || '';
-                                if (actName) {
-                                  return actName;
-                                }
-                                // Si no hay activityName, extraer de description quitando la sala
-                                const parts = desc.split('-').map(p => p.trim());
-                                // Filtrar partes que parecen ser salas
-                                const nameParts = parts.filter(p => !/^sala\s/i.test(p));
-                                return nameParts.join(' - ') || 'Actividad programada';
-                              })() : 'Día de descanso'}
+                            <div className="text-lg sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">
+                              {showActivity ? activityName : 'Día de descanso'}
                             </div>
-                            {showActivity && targetActivity?.time && (
-                              <div className="text-gray-600 text-lg">
-                                Horario: {targetActivity.time}
+                            {showActivity && activityTime && (
+                              <div className="text-sm sm:text-lg text-gray-600">
+                                Horario: {activityTime}
                               </div>
                             )}
                           </div>
                         </div>
 
-                        {/* Tarjeta Sala */}
-                        <div className="bg-white border-2 border-gray-200 rounded-2xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl">
+                        {/* Tarjeta Sala - Móvil optimizada */}
+                        <div className="bg-white border border-gray-200 sm:border-2 rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg overflow-hidden">
                           <div className="relative aspect-[16/10] bg-gray-100 overflow-hidden">
                             <img
                               src={roomImage}
                               alt={targetRoom || 'Sala'}
-                              className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                              className="w-full h-full object-cover"
                               onError={(e) => {
                                 e.currentTarget.src = 'https://images.unsplash.com/photo-1571772996211-2f02c9727629?w=400&h=300&fit=crop';
                               }}
                             />
                             {targetRoom && (
-                              <div className="absolute bottom-3 left-3 bg-black bg-opacity-60 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                              <div className="absolute bottom-2 left-2 bg-black bg-opacity-60 text-white px-2 py-1 rounded-full text-xs font-semibold">
                                 📍 Ubicación
                               </div>
                             )}
                           </div>
-                          <div className="p-6">
-                            <div className="text-sm font-semibold text-green-600 uppercase tracking-wide mb-2">
+                          <div className="p-3 sm:p-6">
+                            <div className="text-xs sm:text-sm font-semibold text-green-600 uppercase tracking-wide mb-1 sm:mb-2">
                               SALA
                             </div>
-                            <div className="text-2xl font-bold text-gray-900 mb-2">
+                            <div className="text-lg sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">
                               {targetRoom ? targetRoom.charAt(0).toUpperCase() + targetRoom.slice(1) : 'Sin asignar'}
                             </div>
                             {targetRoom && (
-                              <div className="text-gray-600 text-lg">
+                              <div className="text-sm sm:text-lg text-gray-600">
                                 Dirígete aquí para tu actividad
                               </div>
                             )}
@@ -541,86 +557,49 @@ function App() {
                     );
                   })()}
 
-                  {/* Mensaje contextual principal */}
-                  <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-2xl p-6 mb-6 border-l-4 border-blue-500">
-                    <div className="flex items-center mb-3">
-                      <Clock className="w-8 h-8 text-blue-600 mr-3" />
-                      <h3 className="text-2xl font-bold text-blue-800">Información Actual</h3>
+                  {/* Mensaje contextual principal - Móvil optimizado */}
+                  <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl sm:rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6 border-l-4 border-blue-500">
+                    <div className="flex items-center mb-2 sm:mb-3">
+                      <Clock className="w-5 h-5 sm:w-8 sm:h-8 text-blue-600 mr-2 sm:mr-3" />
+                      <h3 className="text-lg sm:text-2xl font-bold text-blue-800">Información Actual</h3>
                     </div>
-                    <p className="text-lg text-blue-900 leading-relaxed">
+                    <p className="text-sm sm:text-lg text-blue-900 leading-relaxed">
                       {captureState.message}
                     </p>
                   </div>
 
-                  {/* Panel de actividad actual/próxima */}
+                  {/* Resumen del día - Móvil optimizado */}
                   {captureState.recognitionData.currentContext && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                      {captureState.recognitionData.currentContext.currentActivity && (
-                        <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4">
-                          <div className="flex items-center mb-2">
-                            <div className="w-3 h-3 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-                            <h4 className="font-bold text-green-800">ACTIVIDAD ACTUAL</h4>
-                          </div>
-                          <p className="text-2xl font-bold text-green-700">
-                            {captureState.recognitionData.currentContext.currentActivity.time}
-                          </p>
-                          <p className="text-green-800">
-                            {captureState.recognitionData.currentContext.currentActivity.description}
-                          </p>
-                        </div>
-                      )}
-                      
-                      {captureState.recognitionData.currentContext.nextActivity && (
-                        <div className="bg-orange-50 border-2 border-orange-300 rounded-xl p-4">
-                          <div className="flex items-center mb-2">
-                            <Clock className="w-4 h-4 text-orange-600 mr-2" />
-                            <h4 className="font-bold text-orange-800">PRÓXIMA ACTIVIDAD</h4>
-                          </div>
-                          <p className="text-2xl font-bold text-orange-700">
-                            {captureState.recognitionData.currentContext.nextActivity.time || '---'}
-                          </p>
-                          <p className="text-orange-800">
-                            {captureState.recognitionData.currentContext.nextActivity.activityName || 
-                             captureState.recognitionData.currentContext.nextActivity.description || 
-                             'Sin actividad'}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Resumen del día */}
-                  {captureState.recognitionData.currentContext && (
-                    <div className="bg-gray-50 rounded-2xl p-4 mb-6 shadow-inner">
-                      <h3 className="text-lg font-bold text-gray-800 mb-3">Resumen de Hoy</h3>
-                      <div className="grid grid-cols-3 gap-4 text-center">
+                    <div className="bg-gray-50 rounded-xl sm:rounded-2xl p-3 sm:p-4 mb-4 sm:mb-6 shadow-inner">
+                      <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-2 sm:mb-3">Resumen de Hoy</h3>
+                      <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
                         <div>
-                          <div className="text-2xl font-bold text-blue-600">
+                          <div className="text-lg sm:text-2xl font-bold text-blue-600">
                             {captureState.recognitionData.currentContext.totalActivitiesToday}
                           </div>
-                          <div className="text-sm text-gray-600">Total</div>
+                          <div className="text-xs sm:text-sm text-gray-600">Total</div>
                         </div>
                         <div>
-                          <div className="text-2xl font-bold text-green-600">
+                          <div className="text-lg sm:text-2xl font-bold text-green-600">
                             {captureState.recognitionData.currentContext.completedToday}
                           </div>
-                          <div className="text-sm text-gray-600">Completadas</div>
+                          <div className="text-xs sm:text-sm text-gray-600">Completadas</div>
                         </div>
                         <div>
-                          <div className="text-2xl font-bold text-orange-600">
+                          <div className="text-lg sm:text-2xl font-bold text-orange-600">
                             {captureState.recognitionData.currentContext.upcomingToday}
                           </div>
-                          <div className="text-sm text-gray-600">Pendientes</div>
+                          <div className="text-xs sm:text-sm text-gray-600">Pendientes</div>
                         </div>
                       </div>
                     </div>
                   )}
                   
-                  {/* Horario del día actual */}
-                  <div className="bg-white rounded-2xl p-6 mb-6 shadow-inner text-left">
-                    <div className="flex items-center mb-4">
-                      <Calendar className="w-6 h-6 text-blue-600 mr-2" />
-                      <h3 className="text-2xl font-bold text-gray-800">Horario Detallado - {getCurrentDay()}</h3>
+                  {/* Horario del día actual - Móvil optimizado */}
+                  <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6 shadow-inner text-left">
+                    <div className="flex items-center mb-3 sm:mb-4">
+                      <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 mr-2" />
+                      <h3 className="text-lg sm:text-2xl font-bold text-gray-800">Horario de Hoy</h3>
                     </div>
                     
                     {(() => {
@@ -630,10 +609,10 @@ function App() {
                       
                       if (activities.length === 0) {
                         return (
-                          <div className="text-center py-8">
-                            <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                            <p className="text-xl text-gray-600">Hoy es tu día de descanso</p>
-                            <p className="text-gray-500">¡Disfruta tu tiempo libre!</p>
+                          <div className="text-center py-6 sm:py-8">
+                            <Clock className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-3 sm:mb-4" />
+                            <p className="text-base sm:text-xl text-gray-600">Hoy es tu día de descanso</p>
+                            <p className="text-sm sm:text-base text-gray-500">¡Disfruta tu tiempo libre!</p>
                           </div>
                         );
                       }
@@ -642,7 +621,7 @@ function App() {
                       const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
                       
                       return (
-                        <div className="space-y-3">
+                        <div className="space-y-2 sm:space-y-3">
                           {activities.map((activity, index) => {
                             const [hours, minutes] = activity.time.split(':').map(Number);
                             const activityMinutes = hours * 60 + minutes;
@@ -652,7 +631,7 @@ function App() {
                             return (
                               <div 
                                 key={index} 
-                                className={`flex items-center p-4 rounded-xl border-2 ${
+                                className={`flex items-center p-3 sm:p-4 rounded-lg sm:rounded-xl border-2 ${
                                   isCurrent 
                                     ? 'bg-green-100 border-green-300 shadow-lg' 
                                     : isPast 
@@ -660,7 +639,7 @@ function App() {
                                       : 'bg-blue-50 border-blue-200'
                                 }`}
                               >
-                                <Clock className={`w-6 h-6 mr-4 flex-shrink-0 ${
+                                <Clock className={`w-5 h-5 sm:w-6 sm:h-6 mr-3 sm:mr-4 flex-shrink-0 ${
                                   isCurrent 
                                     ? 'text-green-600' 
                                     : isPast 
@@ -668,7 +647,7 @@ function App() {
                                       : 'text-blue-600'
                                 }`} />
                                 <div className="flex-grow">
-                                  <div className={`text-2xl font-bold ${
+                                  <div className={`text-lg sm:text-2xl font-bold ${
                                     isCurrent 
                                       ? 'text-green-800' 
                                       : isPast 
@@ -677,7 +656,7 @@ function App() {
                                   }`}>
                                     {activity.time}
                                   </div>
-                                  <div className={`text-lg ${
+                                  <div className={`text-sm sm:text-lg ${
                                     isCurrent 
                                       ? 'text-green-700' 
                                       : isPast 
@@ -688,13 +667,13 @@ function App() {
                                   </div>
                                 </div>
                                 {isCurrent && (
-                                  <div className="text-green-600 font-bold text-lg">
+                                  <div className="text-green-600 font-bold text-sm sm:text-lg">
                                     ● AHORA
                                   </div>
                                 )}
                                 {isPast && (
-                                  <div className="text-gray-500 font-medium text-sm">
-                                    ✓ Completada
+                                  <div className="text-gray-500 font-medium text-xs sm:text-sm">
+                                    ✓ OK
                                   </div>
                                 )}
                               </div>
@@ -705,53 +684,19 @@ function App() {
                     })()}
                   </div>
 
-                  {/* Horario semanal completo - simplificado */}
-                  <div className="bg-gray-50 rounded-2xl p-6 shadow-inner text-left">
-                    <h3 className="text-xl font-bold text-gray-800 mb-4 text-center">Horario Semanal</h3>
-                    <div className="grid gap-2">
-                      {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(day => {
-                        const dayActivities = captureState.recognitionData?.scheduleData?.[day];
-                        const activities = parseActivities(dayActivities || '');
-                        const isToday = day === getCurrentDay();
-                        
-                        return (
-                          <div 
-                            key={day} 
-                            className={`p-3 rounded-lg border ${
-                              isToday 
-                                ? 'bg-blue-100 border-blue-300 font-semibold' 
-                                : 'bg-white border-gray-200'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <h4 className={`font-bold ${
-                                isToday ? 'text-blue-800' : 'text-gray-700'
-                              }`}>
-                                {day} {isToday && '(HOY)'}
-                              </h4>
-                              <span className="text-sm text-gray-500">
-                                {activities.length} actividades
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Estadísticas de reconocimiento */}
-                  <div className="bg-white rounded-2xl p-4 mt-6 shadow-inner">
-                    <div className="text-sm text-gray-600 mb-2">Datos del reconocimiento:</div>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                  {/* Estadísticas de reconocimiento - Móvil optimizado */}
+                  <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 mt-4 sm:mt-6 shadow-inner">
+                    <div className="text-xs sm:text-sm text-gray-600 mb-2">Datos del reconocimiento:</div>
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4 text-sm">
                       <div>
                         <span className="font-semibold">Similitud:</span>
-                        <div className="text-lg font-bold text-green-600">
+                        <div className="text-base sm:text-lg font-bold text-green-600">
                           {captureState.recognitionData.similarity}%
                         </div>
                       </div>
                       <div>
                         <span className="font-semibold">Confianza:</span>
-                        <div className="text-lg font-bold text-green-600">
+                        <div className="text-base sm:text-lg font-bold text-green-600">
                           {captureState.recognitionData.confidence}%
                         </div>
                       </div>
@@ -762,15 +707,15 @@ function App() {
                 <div>
                   {captureState.recognitionData?.ui && (
                     <>
-                      <h2 className={`text-3xl font-bold mb-2 ${getStatusColor()}`}>
+                      <h2 className={`text-xl sm:text-3xl font-bold mb-2 ${getStatusColor()}`}>
                         {captureState.recognitionData.ui.title}
                       </h2>
-                      <p className={`text-xl mb-4 ${getStatusColor()}`}>
+                      <p className={`text-base sm:text-xl mb-4 ${getStatusColor()}`}>
                         {captureState.recognitionData.ui.subtitle}
                       </p>
                     </>
                   )}
-                  <p className={`text-2xl font-semibold ${getStatusColor()}`}>
+                  <p className={`text-lg sm:text-2xl font-semibold ${getStatusColor()}`}>
                     {captureState.message || 'Listo para comenzar'}
                   </p>
                 </div>
@@ -778,14 +723,14 @@ function App() {
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          {/* Action Buttons - Optimizados para móvil */}
+          <div className="flex flex-col gap-3 sm:gap-4 justify-center">
             {captureState.status === 'idle' && (
               <button
                 onClick={startCamera}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-12 py-6 rounded-2xl text-2xl font-bold shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-4 min-h-[80px]"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 sm:px-12 sm:py-6 rounded-xl sm:rounded-2xl text-lg sm:text-2xl font-bold shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-3 sm:gap-4 min-h-[60px] sm:min-h-[80px]"
               >
-                <Camera className="w-8 h-8" />
+                <Camera className="w-6 h-6 sm:w-8 sm:h-8" />
                 Activar Cámara
               </button>
             )}
@@ -794,16 +739,16 @@ function App() {
               <>
                 <button
                   onClick={capturePhoto}
-                  className="bg-green-600 hover:bg-green-700 text-white px-12 py-6 rounded-2xl text-2xl font-bold shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-4 min-h-[80px]"
+                  className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 sm:px-12 sm:py-6 rounded-xl sm:rounded-2xl text-lg sm:text-2xl font-bold shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-3 sm:gap-4 min-h-[60px] sm:min-h-[80px]"
                 >
-                  <Camera className="w-8 h-8" />
+                  <Camera className="w-6 h-6 sm:w-8 sm:h-8" />
                   Tomar Foto
                 </button>
                 <button
                   onClick={resetCapture}
-                  className="bg-gray-600 hover:bg-gray-700 text-white px-12 py-6 rounded-2xl text-2xl font-bold shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-4 min-h-[80px]"
+                  className="bg-gray-600 hover:bg-gray-700 text-white px-8 py-4 sm:px-12 sm:py-6 rounded-xl sm:rounded-2xl text-lg sm:text-2xl font-bold shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-3 sm:gap-4 min-h-[60px] sm:min-h-[80px]"
                 >
-                  <RotateCcw className="w-8 h-8" />
+                  <RotateCcw className="w-6 h-6 sm:w-8 sm:h-8" />
                   Cancelar
                 </button>
               </>
@@ -812,40 +757,40 @@ function App() {
             {(['user-found', 'user-not-found', 'no-face', 'error'].includes(captureState.status)) && (
               <button
                 onClick={resetCapture}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-12 py-6 rounded-2xl text-2xl font-bold shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-4 min-h-[80px]"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 sm:px-12 sm:py-6 rounded-xl sm:rounded-2xl text-lg sm:text-2xl font-bold shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-3 sm:gap-4 min-h-[60px] sm:min-h-[80px]"
               >
-                <RotateCcw className="w-8 h-8" />
+                <RotateCcw className="w-6 h-6 sm:w-8 sm:h-8" />
                 Comenzar de Nuevo
               </button>
             )}
 
             {(captureState.status === 'capturing' || captureState.status === 'sending') && (
-              <div className="bg-gray-300 text-gray-500 px-12 py-6 rounded-2xl text-2xl font-bold flex items-center justify-center gap-4 min-h-[80px] cursor-not-allowed">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-600"></div>
+              <div className="bg-gray-300 text-gray-500 px-8 py-4 sm:px-12 sm:py-6 rounded-xl sm:rounded-2xl text-lg sm:text-2xl font-bold flex items-center justify-center gap-3 sm:gap-4 min-h-[60px] sm:min-h-[80px] cursor-not-allowed">
+                <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-gray-600"></div>
                 Procesando...
               </div>
             )}
           </div>
         </div>
 
-        {/* Instructions - Solo se muestran cuando no hay resultados */}
+        {/* Instructions - Optimizadas para móvil */}
         {shouldShowCamera && (
-          <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6">
-            <h2 className="text-2xl font-bold text-blue-800 mb-4 text-center">
+          <div className="bg-blue-50 border border-blue-200 sm:border-2 rounded-xl sm:rounded-2xl p-4 sm:p-6">
+            <h2 className="text-lg sm:text-2xl font-bold text-blue-800 mb-3 sm:mb-4 text-center">
               Instrucciones
             </h2>
-            <div className="space-y-3 text-lg text-blue-700">
+            <div className="space-y-2 sm:space-y-3 text-sm sm:text-lg text-blue-700">
               <div className="flex items-center gap-3">
-                <span className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">1</span>
+                <span className="bg-blue-600 text-white rounded-full w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center font-bold text-sm sm:text-base">1</span>
                 <span>Toque "Activar Cámara" para comenzar</span>
               </div>
               <div className="flex items-center gap-3">
-                <span className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">2</span>
+                <span className="bg-blue-600 text-white rounded-full w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center font-bold text-sm sm:text-base">2</span>
                 <span>Posicione su rostro frente a la cámara</span>
               </div>
               <div className="flex items-center gap-3">
-                <span className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">3</span>
-                <span>Toque "Tomar Foto" para ver sus horarios de rehabilitación</span>
+                <span className="bg-blue-600 text-white rounded-full w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center font-bold text-sm sm:text-base">3</span>
+                <span>Toque "Tomar Foto" para ver sus horarios</span>
               </div>
             </div>
           </div>
