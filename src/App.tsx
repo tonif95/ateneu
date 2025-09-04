@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { Camera, CheckCircle, AlertCircle, RotateCcw, User, XCircle, UserCheck, Calendar, Clock } from 'lucide-react';
+import { Camera, AlertCircle, RotateCcw, User, XCircle, UserCheck, Calendar, Clock } from 'lucide-react';
 
 interface CaptureState {
   status: 'idle' | 'camera-active' | 'capturing' | 'sending' | 'success' | 'error' | 'user-found' | 'user-not-found' | 'no-face';
@@ -25,6 +25,28 @@ interface CaptureState {
       subtitle: string;
       color: string;
       icon: string;
+    };
+    currentContext?: {
+      day: string;
+      time: string;
+      currentActivity?: {
+        time: string;
+        activityName: string;
+        description: string;
+        room?: string;
+        fullDescription: string;
+      } | null;
+      nextActivity?: {
+        time: string;
+        activityName: string;
+        description: string;
+        room?: string;
+        fullDescription: string;
+      } | null;
+      statusInfo: string;
+      completedToday: number;
+      upcomingToday: number;
+      totalActivitiesToday: number;
     };
   };
 }
@@ -53,7 +75,7 @@ function App() {
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+        await (videoRef.current as HTMLVideoElement).play();
       }
       
       setCaptureState({ status: 'camera-active', message: 'Cámara lista. Toque para tomar foto.' });
@@ -115,7 +137,9 @@ function App() {
 
       if (response.ok) {
         const result = await response.json();
-        handleRecognitionResult(result);
+        // Si la respuesta es un array, tomamos el primer elemento
+        const resultData = Array.isArray(result) ? result[0] : result;
+        handleRecognitionResult(resultData);
         stopCamera();
       } else {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -164,7 +188,7 @@ function App() {
       streamRef.current = null;
     }
     if (videoRef.current) {
-      videoRef.current.srcObject = null;
+      (videoRef.current as HTMLVideoElement).srcObject = null;
     }
   }, []);
 
@@ -179,19 +203,112 @@ function App() {
     return days[today.getDay()];
   };
 
+  // ==== PARSE ACTIVITIES (mejorado: soporta "actividad - sala") ====
   const parseActivities = (activitiesString: string) => {
     if (!activitiesString || activitiesString.toLowerCase().includes('descanso')) {
       return [];
     }
     
-    return activitiesString.split(',').map(activity => {
-      const [time, ...descParts] = activity.trim().split('-');
-      return {
-        time: time.trim(),
-        description: descParts.join('-').trim()
-      };
-    }).filter(activity => activity.time && activity.description);
+    return activitiesString
+      .split(',')
+      .map((raw) => raw.trim())
+      .map((entry) => {
+        // formatos:
+        // "09:00-Fisioterapia"
+        // "09:30-Hidroterapia-Sala A"
+        const [timePart, ...rest] = entry.split('-');
+        const time = timePart?.trim();
+        const desc = rest.join('-').trim(); // "Hidroterapia-Sala A" o "Fisioterapia"
+
+        let activityName = desc;
+        let room: string | undefined = undefined;
+
+        const parts = desc.split('-').map((p) => p.trim());
+        if (parts.length > 1) {
+          const last = parts[parts.length - 1];
+          if (/^sala\b/i.test(last)) {
+            room = last;
+            activityName = parts.slice(0, -1).join(' - ');
+          }
+        }
+
+        const fullDescription = room ? `${activityName} • ${room}` : activityName;
+        return { time, description: desc, activityName, room, fullDescription };
+      })
+      .filter((a) => a.time && a.activityName);
   };
+
+  // ==== RESOLVER DE IMÁGENES ====
+  const activityImageMap: Record<string, string> = {
+    'fisioterapia': 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop',
+    'terapia ocupacional': 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?w=400&h=300&fit=crop',
+    'ejercicios': 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop',
+    'rehabilitación': 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=400&h=300&fit=crop',
+    'hidroterapia': 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400&h=300&fit=crop',
+    'evaluación': 'https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=400&h=300&fit=crop',
+    'descanso': 'https://images.unsplash.com/photo-1540553016722-983e48a2cd10?w=400&h=300&fit=crop',
+  };
+
+  const roomImageMap: Record<string, string> = {
+    'sala a': 'https://images.unsplash.com/photo-1571772996211-2f02c9727629?w=400&h=300&fit=crop',
+    'sala b': 'https://images.unsplash.com/photo-1559757175-8a5a08d3b745?w=400&h=300&fit=crop',
+    'sala c': 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?w=400&h=300&fit=crop',
+    'gimnasio': 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop',
+    'piscina': 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400&h=300&fit=crop',
+  };
+
+  function resolveImages(activity: any, room: string) {
+    const actName = activity?.activityName || activity?.description || '';
+    const actKey = actName.toLowerCase().trim();
+    
+    const activityImage = activityImageMap[actKey] || 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop';
+    const roomImage = roomImageMap[room?.toLowerCase()?.trim()] || 'https://images.unsplash.com/photo-1571772996211-2f02c9727629?w=400&h=300&fit=crop';
+
+    return { activityImage, roomImage };
+  }
+
+  // ==== INFERENCIA DE ACTIVIDAD/SALA DESDE EL HORARIO ====
+  function inferContextFromSchedule(
+    scheduleData: any,
+    dayName: string,
+    now: Date = new Date()
+  ) {
+    if (!scheduleData || !dayName) return { currentActivity: null, nextActivity: null };
+
+    const raw = scheduleData[dayName] || '';
+    const activities = parseActivities(raw);
+
+    if (activities.length === 0) return { currentActivity: null, nextActivity: null };
+
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+
+    let current: any = null;
+    let next: any = null;
+
+    for (let i = 0; i < activities.length; i++) {
+      const a = activities[i];
+      const [h, m] = a.time.split(':').map(Number);
+      const t = h * 60 + m;
+
+      const isCurrent = Math.abs(nowMin - t) <= 30 && nowMin >= t - 15;
+      if (isCurrent && !current) {
+        current = { ...a };
+      }
+      if (t > nowMin) {
+        next = { ...a };
+        break;
+      }
+    }
+
+    if (!current && !next) {
+      const last = activities[activities.length - 1];
+      const [h, m] = last.time.split(':').map(Number);
+      const t = h * 60 + m;
+      if (t <= nowMin) current = { ...last };
+    }
+
+    return { currentActivity: current, nextActivity: next };
+  }
 
   const getStatusColor = () => {
     switch (captureState.status) {
@@ -251,7 +368,7 @@ function App() {
           {shouldShowCamera && (
             <div className="relative mb-8">
               <div className="aspect-video bg-gray-100 rounded-2xl overflow-hidden border-4 border-gray-200 relative">
-                {captureState.status === 'camera-active' || captureState.status === 'capturing' ? (
+                {(captureState.status === 'camera-active' || captureState.status === 'capturing') ? (
                   <video
                     ref={videoRef}
                     className="w-full h-full object-cover"
@@ -294,8 +411,135 @@ function App() {
                     ¡Hola {captureState.recognitionData.scheduleData.Nombre}!
                   </h2>
                   <p className={`text-xl mb-6 ${getStatusColor()}`}>
-                    {captureState.recognitionData?.currentContext?.statusInfo || `Paciente ID: ${captureState.recognitionData.scheduleData.PatientID} • ${getCurrentDay()}`}
+                    {(() => {
+                      const statusInfo = captureState.recognitionData?.currentContext?.statusInfo;
+                      if (statusInfo && !statusInfo.includes('undefined')) {
+                        return statusInfo;
+                      }
+                      // Si hay próxima actividad, construir un mensaje adecuado
+                      const nextActivity = captureState.recognitionData?.currentContext?.nextActivity;
+                      if (nextActivity) {
+                        const actName = nextActivity.activityName || nextActivity.description?.split('-')[0]?.trim() || 'Actividad';
+                        return `Próxima actividad: ${actName} - ${nextActivity.time || ''}`;
+                      }
+                      return `Paciente ID: ${captureState.recognitionData.scheduleData.PatientID} • ${getCurrentDay()}`;
+                    })()}
                   </p>
+
+                  {/* === TARJETAS: ACTIVIDAD y SALA === */}
+                  {(() => {
+                    const ctxBackend = captureState.recognitionData?.currentContext;
+                    const day = ctxBackend?.day || getCurrentDay();
+                    const hasActivities = !!(ctxBackend?.currentActivity || ctxBackend?.nextActivity);
+
+                    let targetActivity = null;
+                    let targetRoom = '';
+
+                    if (hasActivities) {
+                      // Usar datos del backend
+                      targetActivity = ctxBackend?.currentActivity || ctxBackend?.nextActivity;
+                      // Obtener la sala del targetActivity o inferirla desde la descripción
+                      if (targetActivity) {
+                        targetRoom = targetActivity.room || '';
+                        // Si no hay sala pero hay descripción, intentar extraerla
+                        if (!targetRoom && targetActivity.description) {
+                          const parts = targetActivity.description.split('-').map(p => p.trim());
+                          const lastPart = parts[parts.length - 1];
+                          if (lastPart && /^sala\s/i.test(lastPart)) {
+                            targetRoom = lastPart;
+                          }
+                        }
+                      }
+                    } else {
+                      // Inferir desde el horario
+                      const inferred = inferContextFromSchedule(captureState.recognitionData?.scheduleData, day);
+                      targetActivity = inferred.currentActivity || inferred.nextActivity;
+                      targetRoom = targetActivity?.room || '';
+                    }
+
+                    const showActivity = !!targetActivity;
+                    const { activityImage, roomImage } = resolveImages(targetActivity, targetRoom);
+
+                    return (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        {/* Tarjeta Actividad */}
+                        <div className="bg-white border-2 border-gray-200 rounded-2xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl">
+                          <div className="relative aspect-[16/10] bg-gray-100 overflow-hidden">
+                            <img
+                              src={activityImage}
+                              alt={targetActivity?.activityName || 'Actividad'}
+                              className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                              onError={(e) => {
+                                e.currentTarget.src = 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop';
+                              }}
+                            />
+                            {showActivity && targetActivity?.time && (
+                              <div className="absolute top-3 right-3 bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                                {targetActivity.time}
+                              </div>
+                            )}
+                          </div>
+                          <div className="p-6">
+                            <div className="text-sm font-semibold text-blue-600 uppercase tracking-wide mb-2">
+                              ACTIVIDAD
+                            </div>
+                            <div className="text-2xl font-bold text-gray-900 mb-2">
+                              {showActivity ? (() => {
+                                // Extraer solo el nombre de la actividad, sin la sala
+                                const actName = targetActivity.activityName || '';
+                                const desc = targetActivity.description || '';
+                                if (actName) {
+                                  return actName;
+                                }
+                                // Si no hay activityName, extraer de description quitando la sala
+                                const parts = desc.split('-').map(p => p.trim());
+                                // Filtrar partes que parecen ser salas
+                                const nameParts = parts.filter(p => !/^sala\s/i.test(p));
+                                return nameParts.join(' - ') || 'Actividad programada';
+                              })() : 'Día de descanso'}
+                            </div>
+                            {showActivity && targetActivity?.time && (
+                              <div className="text-gray-600 text-lg">
+                                Horario: {targetActivity.time}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Tarjeta Sala */}
+                        <div className="bg-white border-2 border-gray-200 rounded-2xl shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl">
+                          <div className="relative aspect-[16/10] bg-gray-100 overflow-hidden">
+                            <img
+                              src={roomImage}
+                              alt={targetRoom || 'Sala'}
+                              className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                              onError={(e) => {
+                                e.currentTarget.src = 'https://images.unsplash.com/photo-1571772996211-2f02c9727629?w=400&h=300&fit=crop';
+                              }}
+                            />
+                            {targetRoom && (
+                              <div className="absolute bottom-3 left-3 bg-black bg-opacity-60 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                                📍 Ubicación
+                              </div>
+                            )}
+                          </div>
+                          <div className="p-6">
+                            <div className="text-sm font-semibold text-green-600 uppercase tracking-wide mb-2">
+                              SALA
+                            </div>
+                            <div className="text-2xl font-bold text-gray-900 mb-2">
+                              {targetRoom ? targetRoom.charAt(0).toUpperCase() + targetRoom.slice(1) : 'Sin asignar'}
+                            </div>
+                            {targetRoom && (
+                              <div className="text-gray-600 text-lg">
+                                Dirígete aquí para tu actividad
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Mensaje contextual principal */}
                   <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-2xl p-6 mb-6 border-l-4 border-blue-500">
@@ -333,10 +577,12 @@ function App() {
                             <h4 className="font-bold text-orange-800">PRÓXIMA ACTIVIDAD</h4>
                           </div>
                           <p className="text-2xl font-bold text-orange-700">
-                            {captureState.recognitionData.currentContext.nextActivity.time}
+                            {captureState.recognitionData.currentContext.nextActivity.time || '---'}
                           </p>
                           <p className="text-orange-800">
-                            {captureState.recognitionData.currentContext.nextActivity.description}
+                            {captureState.recognitionData.currentContext.nextActivity.activityName || 
+                             captureState.recognitionData.currentContext.nextActivity.description || 
+                             'Sin actividad'}
                           </p>
                         </div>
                       )}
@@ -438,7 +684,7 @@ function App() {
                                         ? 'text-gray-600' 
                                         : 'text-gray-700'
                                   }`}>
-                                    {activity.description}
+                                    {activity.room ? activity.fullDescription : activity.description}
                                   </div>
                                 </div>
                                 {isCurrent && (
