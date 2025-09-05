@@ -465,21 +465,6 @@ function App() {
             )}
           </button>
           
-          {/* Help instructions tooltip */}
-          {isHelpActive && (
-            <div className="absolute top-full right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border-2 border-blue-200 p-4 text-sm text-gray-700">
-              <div className="flex items-center gap-2 mb-2">
-                <Volume2 className="w-4 h-4 text-blue-600" />
-                <span className="font-bold text-blue-800">Ayuda Activada</span>
-              </div>
-              <p className="leading-relaxed">
-                {getHelpInstructions()}
-              </p>
-              <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-500">
-                Toque el botón rojo para detener la ayuda por voz
-              </div>
-            </div>
-          )}
         </div>
         {/* Header - Optimizado para móvil */}
         <div className="text-center mb-4 sm:mb-8">
