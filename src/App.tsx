@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Camera, AlertCircle, RotateCcw, User, XCircle, UserCheck, Calendar, Clock, Volume2 } from 'lucide-react';
+import { Camera, AlertCircle, RotateCcw, User, XCircle, UserCheck, Calendar, Clock, Volume2, Heart } from 'lucide-react';
 
 interface CaptureState {
   status: 'idle' | 'camera-active' | 'capturing' | 'sending' | 'success' | 'error' | 'user-found' | 'user-not-found' | 'no-face';
@@ -214,21 +214,19 @@ function App() {
     setIsHelpActive(!isHelpActive);
     
     if (isHelpActive) {
-      // If turning off help, cancel any ongoing speech
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
     }
-    // Don't speak here anymore - let the useEffect handle it
   }, [isHelpActive]);
 
   const getHelpInstructions = useCallback(() => {
     switch (captureState.status) {
       case 'idle':
-        return "Bienvenido al Asistente de Rehabilitación. Para comenzar, busque y toque el botón azul que dice 'Activar Cámara' que está debajo. La aplicación necesita acceso a su cámara para reconocer su rostro y mostrarle sus horarios de actividades.";
+        return "Bienvenido al Asistente de Rehabilitación ATENEU Castelló. Para comenzar, busque y toque el botón azul que dice 'Activar Cámara' que está debajo. La aplicación necesita acceso a su cámara para reconocer su rostro y mostrarle sus horarios de actividades.";
       
       case 'camera-active':
-        return "¡Perfecto! La cámara está ahora activada y funcionando. Colóquese frente a la cámara para que pueda ver claramente su rostro en la pantalla. Cuando esté bien posicionado y listo, toque el botón verde que dice 'Tomar Foto'. Si prefiere cancelar, puede tocar el botón gris 'Cancelar'.";
+        return "Perfecto, la cámara está funcionando. Colóquese frente a la cámara para que pueda ver claramente su rostro en la pantalla. Cuando esté bien posicionado y listo, toque el botón verde que dice 'Tomar Foto'. Si prefiere cancelar, puede tocar el botón gris 'Cancelar'.";
       
       case 'capturing':
         return "Tomando su fotografía ahora. Por favor, manténgase muy quieto durante unos segundos mientras capturamos y procesamos su imagen.";
@@ -242,7 +240,7 @@ function App() {
           const currentContext = captureState.recognitionData?.currentContext;
           const name = scheduleData?.Nombre || 'Usuario';
           
-          let message = `¡Excelente ${name}! Le hemos reconocido correctamente. `;
+          let message = `Excelente ${name}, le hemos reconocido correctamente. `;
           
           if (currentContext?.currentActivity) {
             const activity = currentContext.currentActivity;
@@ -267,15 +265,13 @@ function App() {
         return "Ha ocurrido un error técnico. Por favor, verifique que la cámara funcione correctamente, que tenga una buena conexión a internet, y que el navegador tenga permisos para usar la cámara. Toque 'Comenzar de Nuevo' para intentar otra vez.";
       
       default:
-        return "Sistema de reconocimiento facial para pacientes del centro de rehabilitación. Active la ayuda por voz tocando este botón cuando necesite instrucciones detalladas paso a paso.";
+        return "Sistema de reconocimiento facial para pacientes del centro de rehabilitación ATENEU Castelló. Active la ayuda por voz tocando este botón cuando necesite instrucciones detalladas paso a paso.";
     }
   }, [captureState.status, captureState.recognitionData]);
 
-  // Effect to automatically provide voice guidance when state changes
   useEffect(() => {
     if (isHelpActive) {
       const helpText = getHelpInstructions();
-      // Add a small delay to ensure the UI has updated
       const timer = setTimeout(() => {
         speak(helpText);
       }, 500);
@@ -407,86 +403,111 @@ function App() {
 
   const getStatusColor = () => {
     switch (captureState.status) {
-      case 'user-found': return 'text-green-600';
-      case 'user-not-found': return 'text-orange-600';
-      case 'no-face': case 'error': return 'text-red-600';
-      case 'sending': case 'capturing': return 'text-blue-600';
-      default: return 'text-gray-600';
+      case 'user-found': return 'text-emerald-600';
+      case 'user-not-found': return 'text-amber-600';
+      case 'no-face': case 'error': return 'text-red-500';
+      case 'sending': case 'capturing': return 'text-sky-600';
+      default: return 'text-slate-600';
     }
   };
 
   const getStatusIcon = () => {
     switch (captureState.status) {
-      case 'user-found': return <UserCheck className="w-8 h-8 sm:w-12 sm:h-12" />;
-      case 'user-not-found': return <AlertCircle className="w-8 h-8 sm:w-12 sm:h-12" />;
-      case 'no-face': return <XCircle className="w-8 h-8 sm:w-12 sm:h-12" />;
-      case 'error': return <AlertCircle className="w-8 h-8 sm:w-12 sm:h-12" />;
-      case 'camera-active': return <Camera className="w-8 h-8 sm:w-12 sm:h-12" />;
-      default: return <User className="w-8 h-8 sm:w-12 sm:h-12" />;
+      case 'user-found': return <UserCheck className="w-10 h-10 sm:w-14 sm:h-14" />;
+      case 'user-not-found': return <AlertCircle className="w-10 h-10 sm:w-14 sm:h-14" />;
+      case 'no-face': return <XCircle className="w-10 h-10 sm:w-14 sm:h-14" />;
+      case 'error': return <AlertCircle className="w-10 h-10 sm:w-14 sm:h-14" />;
+      case 'camera-active': return <Camera className="w-10 h-10 sm:w-14 sm:h-14" />;
+      default: return <User className="w-10 h-10 sm:w-14 sm:h-14" />;
     }
   };
 
   const getStatusBackground = () => {
     switch (captureState.status) {
-      case 'user-found': return 'bg-green-100 border-green-300';
-      case 'user-not-found': return 'bg-orange-100 border-orange-300';
-      case 'no-face': case 'error': return 'bg-red-100 border-red-300';
-      case 'sending': case 'capturing': return 'bg-blue-100 border-blue-300';
-      default: return 'bg-gray-100 border-gray-300';
+      case 'user-found': return 'bg-emerald-50 border-emerald-200';
+      case 'user-not-found': return 'bg-amber-50 border-amber-200';
+      case 'no-face': case 'error': return 'bg-red-50 border-red-200';
+      case 'sending': case 'capturing': return 'bg-sky-50 border-sky-200';
+      default: return 'bg-slate-50 border-slate-200';
     }
   };
 
   const shouldShowCamera = ['idle', 'camera-active', 'capturing', 'sending'].includes(captureState.status);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-3 sm:p-6">
-      <div className="max-w-4xl mx-auto">
-        {/* Accessibility Help Button - Fixed position at top */}
-        <div className="fixed top-4 right-4 z-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-sky-50 to-blue-100 p-4 sm:p-6">
+      <div className="max-w-5xl mx-auto">
+        {/* Botón de Ayuda por Voz - Posición fija */}
+        <div className="fixed top-6 right-6 z-50">
           <button
             onClick={toggleHelp}
             className={`
               ${isHelpActive 
-                ? 'bg-red-600 hover:bg-red-700 ring-4 ring-red-200' 
-                : 'bg-blue-600 hover:bg-blue-700 ring-2 ring-blue-200'
+                ? 'bg-red-500 hover:bg-red-600 ring-4 ring-red-200 shadow-2xl' 
+                : 'bg-sky-600 hover:bg-sky-700 ring-3 ring-sky-200/50 shadow-xl'
               } 
-              text-white p-4 sm:p-5 rounded-full shadow-2xl 
+              text-white p-5 rounded-full 
               transform transition-all duration-300 hover:scale-110 active:scale-95
-              flex items-center justify-center gap-2
-              focus:outline-none focus:ring-4 focus:ring-blue-300
-              min-w-[60px] min-h-[60px] sm:min-w-[70px] sm:min-h-[70px]
+              flex items-center justify-center
+              focus:outline-none focus:ring-4 focus:ring-sky-300
+              min-w-[70px] min-h-[70px] sm:min-w-[80px] sm:min-h-[80px]
             `}
             aria-label={isHelpActive ? "Detener ayuda por voz" : "Activar ayuda por voz"}
             title={isHelpActive ? "Detener ayuda por voz" : "Activar ayuda por voz"}
           >
-            <Volume2 className={`w-6 h-6 sm:w-7 sm:h-7 ${isHelpActive ? 'animate-pulse' : ''}`} />
+            <Volume2 className={`w-7 h-7 sm:w-8 sm:h-8 ${isHelpActive ? 'animate-pulse' : ''}`} />
             {isHelpActive && (
-              <div className="absolute -bottom-2 -right-2 w-4 h-4 bg-red-500 rounded-full animate-ping" />
+              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-red-400 rounded-full animate-ping" />
             )}
           </button>
-          
-        </div>
-        {/* Header - Optimizado para móvil */}
-        <div className="text-center mb-4 sm:mb-8">
-          <div className="flex items-center justify-center mb-3 sm:mb-4">
-            <div className="bg-blue-600 p-3 sm:p-4 rounded-full shadow-lg">
-              <User className="w-8 h-8 sm:w-12 sm:h-12 text-white" />
-            </div>
-          </div>
-          <h1 className="text-xl sm:text-4xl font-bold text-gray-800 mb-2">
-            Asistente de Rehabilitación
-          </h1>
-          <p className="text-sm sm:text-xl text-gray-600">
-            Sistema de Reconocimiento Facial
-          </p>
         </div>
 
-        {/* Main Content */}
-        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-8 mb-4 sm:mb-6">
-          {/* Camera Section - Optimizado para móvil */}
+        {/* Header con branding ATENEU */}
+        <div className="text-center mb-8 sm:mb-12">
+          {/* Logo y branding */}
+          <div className="flex items-center justify-center mb-6">
+            <div className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200">
+              <div className="flex items-center justify-center space-x-4">
+                {/* Logo simulado de ATENEU */}
+                <div className="relative">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-sky-600 rounded-full flex items-center justify-center">
+                    <Heart className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+                  </div>
+                  <div className="absolute -top-1 -right-1 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center">
+                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                  </div>
+                  <div className="absolute -bottom-1 -left-1 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center">
+                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                  </div>
+                </div>
+                
+                <div className="text-left">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 leading-tight">
+                    daño cerebral
+                  </h1>
+                  <p className="text-sky-600 font-semibold text-lg sm:text-xl">
+                    ATENEU CASTELLÓ
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <h2 className="text-2xl sm:text-4xl font-bold text-slate-800 mb-3">
+            Asistente Personal
+          </h2>
+          <p className="text-lg sm:text-xl text-slate-600 font-medium">
+            Sistema de Reconocimiento y Horarios
+          </p>
+          <div className="mt-4 w-24 h-1 bg-gradient-to-r from-sky-400 to-blue-500 mx-auto rounded-full"></div>
+        </div>
+
+        {/* Contenido Principal */}
+        <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 sm:p-10 mb-8">
+          {/* Sección de Cámara */}
           {shouldShowCamera && (
-            <div className="relative mb-4 sm:mb-8">
-              <div className="aspect-video bg-gray-100 rounded-xl sm:rounded-2xl overflow-hidden border-2 sm:border-4 border-gray-200 relative">
+            <div className="relative mb-8 sm:mb-10">
+              <div className="aspect-video bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl overflow-hidden border-4 border-slate-300 relative shadow-inner">
                 {(captureState.status === 'camera-active' || captureState.status === 'capturing') ? (
                   <video
                     ref={videoRef}
@@ -498,18 +519,23 @@ function App() {
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <div className="text-center">
-                      <Camera className="w-16 h-16 sm:w-24 sm:h-24 text-gray-400 mx-auto mb-4" />
-                      <p className="text-lg sm:text-2xl text-gray-500 font-medium">
-                        Cámara inactiva
+                      <div className="bg-slate-300 rounded-full p-8 sm:p-12 mx-auto mb-6 shadow-lg">
+                        <Camera className="w-16 h-16 sm:w-24 sm:h-24 text-slate-500 mx-auto" />
+                      </div>
+                      <p className="text-xl sm:text-3xl text-slate-500 font-semibold">
+                        Cámara desactivada
                       </p>
                     </div>
                   </div>
                 )}
                 
                 {captureState.status === 'capturing' && (
-                  <div className="absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center">
-                    <div className="bg-blue-600 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-full text-base sm:text-xl font-semibold">
-                      📸 Capturando...
+                  <div className="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center">
+                    <div className="bg-sky-600 text-white px-6 py-4 sm:px-8 sm:py-6 rounded-2xl text-xl sm:text-2xl font-bold shadow-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Capturando...</span>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -517,59 +543,49 @@ function App() {
             </div>
           )}
 
-          {/* Status Message */}
-          <div className="text-center mb-4 sm:mb-8">
-            <div className={`inline-block p-4 sm:p-8 rounded-2xl sm:rounded-3xl border-2 ${getStatusBackground()}`}>
-              <div className={`flex items-center justify-center mb-3 sm:mb-4 ${getStatusColor()}`}>
+          {/* Mensaje de Estado */}
+          <div className="text-center mb-8 sm:mb-10">
+            <div className={`inline-block p-6 sm:p-10 rounded-3xl border-3 ${getStatusBackground()} shadow-lg max-w-6xl`}>
+              <div className={`flex items-center justify-center mb-4 sm:mb-6 ${getStatusColor()}`}>
                 {getStatusIcon()}
               </div>
               
               {captureState.status === 'user-found' && captureState.recognitionData?.scheduleData ? (
-                <div className="max-w-4xl">
-                  <h2 className={`text-lg sm:text-3xl font-bold mb-2 ${getStatusColor()}`}>
-                    ¡Hola {captureState.recognitionData.scheduleData.Nombre}!
-                  </h2>
-                  <p className={`text-sm sm:text-xl mb-4 sm:mb-6 ${getStatusColor()}`}>
-                    {(() => {
-                      const ctxBackend = captureState.recognitionData?.currentContext;
-                      const scheduleData = captureState.recognitionData?.scheduleData;
-                      const day = ctxBackend?.day || getCurrentDay();
-                      
-                      // Obtener actividad objetivo del backend
-                      let targetActivity = ctxBackend?.currentActivity || ctxBackend?.nextActivity;
-                      let activityName = '';
-                      let targetRoom = '';
-                      let activityTime = '';
-
-                      if (targetActivity && targetActivity.description) {
-                        const desc = targetActivity.description;
-                        const parts = desc.split('-');
+                <div className="space-y-6 sm:space-y-8">
+                  <div>
+                    <h2 className={`text-2xl sm:text-4xl font-bold mb-3 ${getStatusColor()}`}>
+                      Bienvenido/a {captureState.recognitionData.scheduleData.Nombre}
+                    </h2>
+                    <p className={`text-lg sm:text-2xl mb-6 ${getStatusColor()}`}>
+                      {(() => {
+                        const ctxBackend = captureState.recognitionData?.currentContext;
+                        let targetActivity = ctxBackend?.currentActivity || ctxBackend?.nextActivity;
                         
-                        if (parts.length >= 2 && parts[parts.length - 1].toLowerCase().includes('sala')) {
-                          activityName = parts.slice(0, -1).join('-').trim();
-                          targetRoom = parts[parts.length - 1].trim();
-                        } else {
-                          activityName = desc;
+                        if (targetActivity && targetActivity.description) {
+                          const desc = targetActivity.description;
+                          const parts = desc.split('-');
+                          let activityName = '';
+                          
+                          if (parts.length >= 2 && parts[parts.length - 1].toLowerCase().includes('sala')) {
+                            activityName = parts.slice(0, -1).join('-').trim();
+                          } else {
+                            activityName = desc;
+                          }
+                          
+                          return `Tu próxima actividad: ${activityName} - ${targetActivity.time}`;
                         }
                         
-                        activityTime = targetActivity.time || '';
-                        
-                        return targetActivity ? 
-                          `Próxima actividad: ${activityName} - ${activityTime}` :
-                          `Paciente ID: ${captureState.recognitionData.scheduleData.PatientID} • ${getCurrentDay()}`;
-                      }
-                      
-                      return `Paciente ID: ${captureState.recognitionData.scheduleData.PatientID} • ${getCurrentDay()}`;
-                    })()}
-                  </p>
+                        return `Paciente ID: ${captureState.recognitionData.scheduleData.PatientID} • Hoy es ${getCurrentDay()}`;
+                      })()}
+                    </p>
+                  </div>
 
-                  {/* === TARJETAS: ACTIVIDAD y SALA - Optimizadas para móvil === */}
+                  {/* Tarjetas de Actividad y Sala */}
                   {(() => {
                     const ctxBackend = captureState.recognitionData?.currentContext;
                     const scheduleData = captureState.recognitionData?.scheduleData;
                     const day = ctxBackend?.day || getCurrentDay();
                     
-                    // Obtener actividad objetivo del backend
                     let targetActivity = ctxBackend?.currentActivity || ctxBackend?.nextActivity;
                     let activityName = '';
                     let targetRoom = '';
@@ -602,10 +618,10 @@ function App() {
                     const { activityImage, roomImage } = resolveImages({ activityName }, targetRoom);
 
                     return (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6 mb-4 sm:mb-8">
-                        {/* Tarjeta Actividad - Móvil optimizada */}
-                        <div className="bg-white border border-gray-200 sm:border-2 rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg overflow-hidden">
-                          <div className="relative aspect-[16/10] bg-gray-100 overflow-hidden">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 mb-8">
+                        {/* Tarjeta Actividad */}
+                        <div className="bg-white border-3 border-sky-200 rounded-2xl shadow-xl overflow-hidden transform hover:scale-105 transition-transform duration-200">
+                          <div className="relative aspect-[16/10] bg-gradient-to-br from-sky-100 to-sky-200 overflow-hidden">
                             <img
                               src={activityImage}
                               alt={activityName || 'Actividad'}
@@ -615,29 +631,29 @@ function App() {
                               }}
                             />
                             {showActivity && activityTime && (
-                              <div className="absolute top-2 right-2 bg-blue-600 text-white px-2 py-1 rounded-full text-xs sm:text-sm font-semibold">
+                              <div className="absolute top-4 right-4 bg-sky-600 text-white px-4 py-2 rounded-full text-lg font-bold shadow-lg">
                                 {activityTime}
                               </div>
                             )}
+                            <div className="absolute bottom-4 left-4 bg-black bg-opacity-60 text-white px-4 py-2 rounded-full text-lg font-semibold">
+                              Actividad
+                            </div>
                           </div>
-                          <div className="p-3 sm:p-6">
-                            <div className="text-xs sm:text-sm font-semibold text-blue-600 uppercase tracking-wide mb-1 sm:mb-2">
-                              ACTIVIDAD
-                            </div>
-                            <div className="text-lg sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">
+                          <div className="p-6 sm:p-8">
+                            <h3 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-3">
                               {showActivity ? activityName : 'Día de descanso'}
-                            </div>
+                            </h3>
                             {showActivity && activityTime && (
-                              <div className="text-sm sm:text-lg text-gray-600">
+                              <p className="text-lg sm:text-xl text-slate-600">
                                 Horario: {activityTime}
-                              </div>
+                              </p>
                             )}
                           </div>
                         </div>
 
-                        {/* Tarjeta Sala - Móvil optimizada */}
-                        <div className="bg-white border border-gray-200 sm:border-2 rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg overflow-hidden">
-                          <div className="relative aspect-[16/10] bg-gray-100 overflow-hidden">
+                        {/* Tarjeta Sala */}
+                        <div className="bg-white border-3 border-emerald-200 rounded-2xl shadow-xl overflow-hidden transform hover:scale-105 transition-transform duration-200">
+                          <div className="relative aspect-[16/10] bg-gradient-to-br from-emerald-100 to-emerald-200 overflow-hidden">
                             <img
                               src={roomImage}
                               alt={targetRoom || 'Sala'}
@@ -646,23 +662,18 @@ function App() {
                                 e.currentTarget.src = 'https://images.unsplash.com/photo-1571772996211-2f02c9727629?w=400&h=300&fit=crop';
                               }}
                             />
-                            {targetRoom && (
-                              <div className="absolute bottom-2 left-2 bg-black bg-opacity-60 text-white px-2 py-1 rounded-full text-xs font-semibold">
-                                📍 Ubicación
-                              </div>
-                            )}
+                            <div className="absolute bottom-4 left-4 bg-black bg-opacity-60 text-white px-4 py-2 rounded-full text-lg font-semibold">
+                              Ubicación
+                            </div>
                           </div>
-                          <div className="p-3 sm:p-6">
-                            <div className="text-xs sm:text-sm font-semibold text-green-600 uppercase tracking-wide mb-1 sm:mb-2">
-                              SALA
-                            </div>
-                            <div className="text-lg sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">
+                          <div className="p-6 sm:p-8">
+                            <h3 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-3">
                               {targetRoom ? targetRoom.charAt(0).toUpperCase() + targetRoom.slice(1) : 'Sin asignar'}
-                            </div>
+                            </h3>
                             {targetRoom && (
-                              <div className="text-sm sm:text-lg text-gray-600">
+                              <p className="text-lg sm:text-xl text-slate-600">
                                 Dirígete aquí para tu actividad
-                              </div>
+                              </p>
                             )}
                           </div>
                         </div>
@@ -670,49 +681,53 @@ function App() {
                     );
                   })()}
 
-                  {/* Mensaje contextual principal - Móvil optimizado */}
-                  <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl sm:rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6 border-l-4 border-blue-500">
-                    <div className="flex items-center mb-2 sm:mb-3">
-                      <Clock className="w-5 h-5 sm:w-8 sm:h-8 text-blue-600 mr-2 sm:mr-3" />
-                      <h3 className="text-lg sm:text-2xl font-bold text-blue-800">Información Actual</h3>
+                  {/* Mensaje contextual */}
+                  <div className="bg-gradient-to-r from-sky-50 via-blue-50 to-sky-100 rounded-2xl p-6 sm:p-8 mb-8 border-l-6 border-sky-500 shadow-lg">
+                    <div className="flex items-center mb-4">
+                      <div className="bg-sky-600 rounded-full p-3 mr-4">
+                        <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+                      </div>
+                      <h3 className="text-xl sm:text-3xl font-bold text-sky-800">Información Actual</h3>
                     </div>
-                    <p className="text-sm sm:text-lg text-blue-900 leading-relaxed">
+                    <p className="text-lg sm:text-xl text-sky-900 leading-relaxed font-medium">
                       {captureState.message}
                     </p>
                   </div>
 
-                  {/* Resumen del día - Móvil optimizado */}
+                  {/* Resumen del día */}
                   {captureState.recognitionData.currentContext && (
-                    <div className="bg-gray-50 rounded-xl sm:rounded-2xl p-3 sm:p-4 mb-4 sm:mb-6 shadow-inner">
-                      <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-2 sm:mb-3">Resumen de Hoy</h3>
-                      <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
-                        <div>
-                          <div className="text-lg sm:text-2xl font-bold text-blue-600">
+                    <div className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-2xl p-6 sm:p-8 mb-8 shadow-lg border border-slate-200">
+                      <h3 className="text-xl sm:text-2xl font-bold text-slate-800 mb-6 text-center">Resumen de Hoy</h3>
+                      <div className="grid grid-cols-3 gap-6 text-center">
+                        <div className="bg-white rounded-xl p-4 shadow-md">
+                          <div className="text-3xl sm:text-4xl font-bold text-sky-600 mb-2">
                             {captureState.recognitionData.currentContext.totalActivitiesToday}
                           </div>
-                          <div className="text-xs sm:text-sm text-gray-600">Total</div>
+                          <div className="text-sm sm:text-base text-slate-600 font-semibold">Total</div>
                         </div>
-                        <div>
-                          <div className="text-lg sm:text-2xl font-bold text-green-600">
+                        <div className="bg-white rounded-xl p-4 shadow-md">
+                          <div className="text-3xl sm:text-4xl font-bold text-emerald-600 mb-2">
                             {captureState.recognitionData.currentContext.completedToday}
                           </div>
-                          <div className="text-xs sm:text-sm text-gray-600">Completadas</div>
+                          <div className="text-sm sm:text-base text-slate-600 font-semibold">Completadas</div>
                         </div>
-                        <div>
-                          <div className="text-lg sm:text-2xl font-bold text-orange-600">
+                        <div className="bg-white rounded-xl p-4 shadow-md">
+                          <div className="text-3xl sm:text-4xl font-bold text-amber-600 mb-2">
                             {captureState.recognitionData.currentContext.upcomingToday}
                           </div>
-                          <div className="text-xs sm:text-sm text-gray-600">Pendientes</div>
+                          <div className="text-sm sm:text-base text-slate-600 font-semibold">Pendientes</div>
                         </div>
                       </div>
                     </div>
                   )}
                   
-                  {/* Horario del día actual - Móvil optimizado */}
-                  <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6 shadow-inner text-left">
-                    <div className="flex items-center mb-3 sm:mb-4">
-                      <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 mr-2" />
-                      <h3 className="text-lg sm:text-2xl font-bold text-gray-800">Horario de Hoy</h3>
+                  {/* Horario del día */}
+                  <div className="bg-white rounded-2xl p-6 sm:p-8 mb-8 shadow-lg border-2 border-slate-200">
+                    <div className="flex items-center mb-6">
+                      <div className="bg-sky-600 rounded-full p-3 mr-4">
+                        <Calendar className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+                      </div>
+                      <h3 className="text-xl sm:text-3xl font-bold text-slate-800">Horario de Hoy</h3>
                     </div>
                     
                     {(() => {
@@ -722,10 +737,12 @@ function App() {
                       
                       if (activities.length === 0) {
                         return (
-                          <div className="text-center py-6 sm:py-8">
-                            <Clock className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-3 sm:mb-4" />
-                            <p className="text-base sm:text-xl text-gray-600">Hoy es tu día de descanso</p>
-                            <p className="text-sm sm:text-base text-gray-500">¡Disfruta tu tiempo libre!</p>
+                          <div className="text-center py-12">
+                            <div className="bg-slate-100 rounded-full p-8 mx-auto mb-6 w-fit">
+                              <Clock className="w-16 h-16 text-slate-400 mx-auto" />
+                            </div>
+                            <p className="text-2xl sm:text-3xl text-slate-600 font-semibold mb-2">Hoy es tu día de descanso</p>
+                            <p className="text-lg sm:text-xl text-slate-500">Disfruta tu tiempo libre</p>
                           </div>
                         );
                       }
@@ -734,7 +751,7 @@ function App() {
                       const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
                       
                       return (
-                        <div className="space-y-2 sm:space-y-3">
+                        <div className="space-y-4">
                           {activities.map((activity, index) => {
                             const [hours, minutes] = activity.time.split(':').map(Number);
                             const activityMinutes = hours * 60 + minutes;
@@ -744,49 +761,53 @@ function App() {
                             return (
                               <div 
                                 key={index} 
-                                className={`flex items-center p-3 sm:p-4 rounded-lg sm:rounded-xl border-2 ${
+                                className={`flex items-center p-5 sm:p-6 rounded-xl border-3 shadow-md ${
                                   isCurrent 
-                                    ? 'bg-green-100 border-green-300 shadow-lg' 
+                                    ? 'bg-emerald-50 border-emerald-300 shadow-lg scale-105' 
                                     : isPast 
-                                      ? 'bg-gray-100 border-gray-300' 
-                                      : 'bg-blue-50 border-blue-200'
-                                }`}
+                                      ? 'bg-slate-100 border-slate-300' 
+                                      : 'bg-sky-50 border-sky-200'
+                                } transition-all duration-200`}
                               >
-                                <Clock className={`w-5 h-5 sm:w-6 sm:h-6 mr-3 sm:mr-4 flex-shrink-0 ${
+                                <div className={`rounded-full p-3 mr-4 ${
                                   isCurrent 
-                                    ? 'text-green-600' 
+                                    ? 'bg-emerald-600' 
                                     : isPast 
-                                      ? 'text-gray-500' 
-                                      : 'text-blue-600'
-                                }`} />
+                                      ? 'bg-slate-500' 
+                                      : 'bg-sky-600'
+                                }`}>
+                                  <Clock className="w-6 h-6 text-white" />
+                                </div>
+                                
                                 <div className="flex-grow">
-                                  <div className={`text-lg sm:text-2xl font-bold ${
+                                  <div className={`text-2xl sm:text-3xl font-bold mb-2 ${
                                     isCurrent 
-                                      ? 'text-green-800' 
+                                      ? 'text-emerald-800' 
                                       : isPast 
-                                        ? 'text-gray-600' 
-                                        : 'text-blue-800'
+                                        ? 'text-slate-600' 
+                                        : 'text-sky-800'
                                   }`}>
                                     {activity.time}
                                   </div>
-                                  <div className={`text-sm sm:text-lg ${
+                                  <div className={`text-lg sm:text-xl ${
                                     isCurrent 
-                                      ? 'text-green-700' 
+                                      ? 'text-emerald-700' 
                                       : isPast 
-                                        ? 'text-gray-600' 
-                                        : 'text-gray-700'
+                                        ? 'text-slate-600' 
+                                        : 'text-slate-700'
                                   }`}>
                                     {activity.room ? activity.fullDescription : activity.description}
                                   </div>
                                 </div>
+                                
                                 {isCurrent && (
-                                  <div className="text-green-600 font-bold text-sm sm:text-lg">
-                                    ● AHORA
+                                  <div className="bg-emerald-600 text-white px-4 py-2 rounded-full text-lg font-bold">
+                                    AHORA
                                   </div>
                                 )}
                                 {isPast && (
-                                  <div className="text-gray-500 font-medium text-xs sm:text-sm">
-                                    ✓ OK
+                                  <div className="bg-slate-500 text-white px-4 py-2 rounded-full text-lg font-bold">
+                                    OK
                                   </div>
                                 )}
                               </div>
@@ -797,19 +818,19 @@ function App() {
                     })()}
                   </div>
 
-                  {/* Estadísticas de reconocimiento - Móvil optimizado */}
-                  <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 mt-4 sm:mt-6 shadow-inner">
-                    <div className="text-xs sm:text-sm text-gray-600 mb-2">Datos del reconocimiento:</div>
-                    <div className="grid grid-cols-2 gap-3 sm:gap-4 text-sm">
-                      <div>
-                        <span className="font-semibold">Similitud:</span>
-                        <div className="text-base sm:text-lg font-bold text-green-600">
+                  {/* Estadísticas de reconocimiento */}
+                  <div className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-2xl p-6 shadow-lg border border-slate-200">
+                    <div className="text-base text-slate-600 mb-4 font-semibold">Datos del reconocimiento:</div>
+                    <div className="grid grid-cols-2 gap-6 text-center">
+                      <div className="bg-white rounded-xl p-4 shadow-md">
+                        <span className="text-lg font-semibold text-slate-700">Similitud:</span>
+                        <div className="text-2xl sm:text-3xl font-bold text-emerald-600 mt-2">
                           {captureState.recognitionData.similarity}%
                         </div>
                       </div>
-                      <div>
-                        <span className="font-semibold">Confianza:</span>
-                        <div className="text-base sm:text-lg font-bold text-green-600">
+                      <div className="bg-white rounded-xl p-4 shadow-md">
+                        <span className="text-lg font-semibold text-slate-700">Confianza:</span>
+                        <div className="text-2xl sm:text-3xl font-bold text-emerald-600 mt-2">
                           {captureState.recognitionData.confidence}%
                         </div>
                       </div>
@@ -819,16 +840,16 @@ function App() {
               ) : (
                 <div>
                   {captureState.recognitionData?.ui && (
-                    <>
-                      <h2 className={`text-xl sm:text-3xl font-bold mb-2 ${getStatusColor()}`}>
+                    <div className="mb-6">
+                      <h2 className={`text-2xl sm:text-4xl font-bold mb-4 ${getStatusColor()}`}>
                         {captureState.recognitionData.ui.title}
                       </h2>
-                      <p className={`text-base sm:text-xl mb-4 ${getStatusColor()}`}>
+                      <p className={`text-lg sm:text-2xl mb-6 ${getStatusColor()}`}>
                         {captureState.recognitionData.ui.subtitle}
                       </p>
-                    </>
+                    </div>
                   )}
-                  <p className={`text-lg sm:text-2xl font-semibold ${getStatusColor()}`}>
+                  <p className={`text-xl sm:text-3xl font-semibold ${getStatusColor()}`}>
                     {captureState.message || 'Listo para comenzar'}
                   </p>
                 </div>
@@ -836,14 +857,14 @@ function App() {
             </div>
           </div>
 
-          {/* Action Buttons - Optimizados para móvil */}
-          <div className="flex flex-col gap-3 sm:gap-4 justify-center">
+          {/* Botones de Acción */}
+          <div className="flex flex-col gap-4 sm:gap-6 justify-center max-w-2xl mx-auto">
             {captureState.status === 'idle' && (
               <button
                 onClick={startCamera}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 sm:px-12 sm:py-6 rounded-xl sm:rounded-2xl text-lg sm:text-2xl font-bold shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-3 sm:gap-4 min-h-[60px] sm:min-h-[80px]"
+                className="bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-700 hover:to-blue-700 text-white px-10 py-6 sm:px-14 sm:py-8 rounded-2xl text-xl sm:text-3xl font-bold shadow-xl transform transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-4 sm:gap-6 min-h-[80px] sm:min-h-[100px] border-2 border-sky-500"
               >
-                <Camera className="w-6 h-6 sm:w-8 sm:h-8" />
+                <Camera className="w-8 h-8 sm:w-10 sm:h-10" />
                 Activar Cámara
               </button>
             )}
@@ -852,16 +873,16 @@ function App() {
               <>
                 <button
                   onClick={capturePhoto}
-                  className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 sm:px-12 sm:py-6 rounded-xl sm:rounded-2xl text-lg sm:text-2xl font-bold shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-3 sm:gap-4 min-h-[60px] sm:min-h-[80px]"
+                  className="bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white px-10 py-6 sm:px-14 sm:py-8 rounded-2xl text-xl sm:text-3xl font-bold shadow-xl transform transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-4 sm:gap-6 min-h-[80px] sm:min-h-[100px] border-2 border-emerald-500"
                 >
-                  <Camera className="w-6 h-6 sm:w-8 sm:h-8" />
+                  <Camera className="w-8 h-8 sm:w-10 sm:h-10" />
                   Tomar Foto
                 </button>
                 <button
                   onClick={resetCapture}
-                  className="bg-gray-600 hover:bg-gray-700 text-white px-8 py-4 sm:px-12 sm:py-6 rounded-xl sm:rounded-2xl text-lg sm:text-2xl font-bold shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-3 sm:gap-4 min-h-[60px] sm:min-h-[80px]"
+                  className="bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white px-10 py-6 sm:px-14 sm:py-8 rounded-2xl text-xl sm:text-3xl font-bold shadow-xl transform transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-4 sm:gap-6 min-h-[80px] sm:min-h-[100px] border-2 border-slate-500"
                 >
-                  <RotateCcw className="w-6 h-6 sm:w-8 sm:h-8" />
+                  <RotateCcw className="w-8 h-8 sm:w-10 sm:h-10" />
                   Cancelar
                 </button>
               </>
@@ -870,41 +891,54 @@ function App() {
             {(['user-found', 'user-not-found', 'no-face', 'error'].includes(captureState.status)) && (
               <button
                 onClick={resetCapture}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 sm:px-12 sm:py-6 rounded-xl sm:rounded-2xl text-lg sm:text-2xl font-bold shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-3 sm:gap-4 min-h-[60px] sm:min-h-[80px]"
+                className="bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-700 hover:to-blue-700 text-white px-10 py-6 sm:px-14 sm:py-8 rounded-2xl text-xl sm:text-3xl font-bold shadow-xl transform transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center gap-4 sm:gap-6 min-h-[80px] sm:min-h-[100px] border-2 border-sky-500"
               >
-                <RotateCcw className="w-6 h-6 sm:w-8 sm:h-8" />
+                <RotateCcw className="w-8 h-8 sm:w-10 sm:h-10" />
                 Comenzar de Nuevo
               </button>
             )}
 
             {(captureState.status === 'capturing' || captureState.status === 'sending') && (
-              <div className="bg-gray-300 text-gray-500 px-8 py-4 sm:px-12 sm:py-6 rounded-xl sm:rounded-2xl text-lg sm:text-2xl font-bold flex items-center justify-center gap-3 sm:gap-4 min-h-[60px] sm:min-h-[80px] cursor-not-allowed">
-                <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-gray-600"></div>
+              <div className="bg-slate-300 text-slate-500 px-10 py-6 sm:px-14 sm:py-8 rounded-2xl text-xl sm:text-3xl font-bold flex items-center justify-center gap-4 sm:gap-6 min-h-[80px] sm:min-h-[100px] cursor-not-allowed border-2 border-slate-400">
+                <div className="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 border-4 border-slate-600 border-t-transparent"></div>
                 Procesando...
               </div>
             )}
           </div>
         </div>
 
-        {/* Instructions - Optimizadas para móvil */}
+        {/* Instrucciones mejoradas */}
         {shouldShowCamera && (
-          <div className="bg-blue-50 border border-blue-200 sm:border-2 rounded-xl sm:rounded-2xl p-4 sm:p-6">
-            <h2 className="text-lg sm:text-2xl font-bold text-blue-800 mb-3 sm:mb-4 text-center">
-              Instrucciones
+          <div className="bg-gradient-to-r from-sky-50 via-blue-50 to-sky-100 border-3 border-sky-200 rounded-2xl p-6 sm:p-8 shadow-lg">
+            <h2 className="text-xl sm:text-3xl font-bold text-sky-800 mb-6 text-center flex items-center justify-center">
+              <div className="bg-sky-600 rounded-full p-2 mr-3">
+                <User className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+              </div>
+              Instrucciones de Uso
             </h2>
-            <div className="space-y-2 sm:space-y-3 text-sm sm:text-lg text-blue-700">
-              <div className="flex items-center gap-3">
-                <span className="bg-blue-600 text-white rounded-full w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center font-bold text-sm sm:text-base">1</span>
-                <span>Toque "Activar Cámara" para comenzar</span>
+            <div className="space-y-4 text-lg sm:text-xl text-sky-700">
+              <div className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-md">
+                <div className="bg-sky-600 text-white rounded-full w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center font-bold text-lg sm:text-xl flex-shrink-0">1</div>
+                <span className="font-semibold">Toque "Activar Cámara" para comenzar</span>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="bg-blue-600 text-white rounded-full w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center font-bold text-sm sm:text-base">2</span>
-                <span>Posicione su rostro frente a la cámara</span>
+              <div className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-md">
+                <div className="bg-sky-600 text-white rounded-full w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center font-bold text-lg sm:text-xl flex-shrink-0">2</div>
+                <span className="font-semibold">Posicione su rostro frente a la cámara</span>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="bg-blue-600 text-white rounded-full w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center font-bold text-sm sm:text-base">3</span>
-                <span>Toque "Tomar Foto" para ver sus horarios</span>
+              <div className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-md">
+                <div className="bg-sky-600 text-white rounded-full w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center font-bold text-lg sm:text-xl flex-shrink-0">3</div>
+                <span className="font-semibold">Toque "Tomar Foto" para ver sus horarios</span>
               </div>
+            </div>
+            
+            {/* Footer con branding */}
+            <div className="mt-8 pt-6 border-t-2 border-sky-200 text-center">
+              <p className="text-sky-600 font-semibold text-lg">
+                Fundación Daño Cerebral Adquirido - ATENEU Castelló
+              </p>
+              <p className="text-sky-500 text-base mt-2">
+                Cuidando y apoyando tu rehabilitación cada día
+              </p>
             </div>
           </div>
         )}
