@@ -698,24 +698,24 @@ function App() {
                   {captureState.recognitionData.currentContext && (
                     <div className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 lg:p-8 mb-4 sm:mb-6 md:mb-8 shadow-lg border border-slate-200">
                       <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-slate-800 mb-3 sm:mb-4 md:mb-6 text-center">Resumen de Hoy</h3>
-                      <div className="grid grid-cols-3 gap-3 sm:gap-4 md:gap-6 text-center">
-                        <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-5 shadow-md">
-                          <div className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-sky-600 mb-2">
+                      <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4 lg:gap-6 text-center">
+                        <div className="bg-white rounded-lg sm:rounded-xl p-2 sm:p-3 md:p-4 lg:p-5 shadow-md">
+                          <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-sky-600 mb-1 sm:mb-2">
                             {captureState.recognitionData.currentContext.totalActivitiesToday}
                           </div>
-                          <div className="text-sm sm:text-base md:text-lg text-slate-600 font-semibold leading-tight">Total</div>
+                          <div className="text-xs sm:text-sm md:text-base lg:text-lg text-slate-600 font-semibold leading-tight">Total</div>
                         </div>
-                        <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-5 shadow-md">
-                          <div className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-emerald-600 mb-2">
+                        <div className="bg-white rounded-lg sm:rounded-xl p-2 sm:p-3 md:p-4 lg:p-5 shadow-md">
+                          <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-emerald-600 mb-1 sm:mb-2">
                             {captureState.recognitionData.currentContext.completedToday}
                           </div>
-                          <div className="text-sm sm:text-base md:text-lg text-slate-600 font-semibold leading-tight">Completadas</div>
+                          <div className="text-xs sm:text-sm md:text-base lg:text-lg text-slate-600 font-semibold leading-tight break-words">Hechas</div>
                         </div>
-                        <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-5 shadow-md">
-                          <div className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-amber-600 mb-2">
+                        <div className="bg-white rounded-lg sm:rounded-xl p-2 sm:p-3 md:p-4 lg:p-5 shadow-md">
+                          <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-amber-600 mb-1 sm:mb-2">
                             {captureState.recognitionData.currentContext.upcomingToday}
                           </div>
-                          <div className="text-sm sm:text-base md:text-lg text-slate-600 font-semibold leading-tight">Pendientes</div>
+                          <div className="text-xs sm:text-sm md:text-base lg:text-lg text-slate-600 font-semibold leading-tight break-words">Faltan</div>
                         </div>
                       </div>
                     </div>
