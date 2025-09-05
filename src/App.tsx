@@ -1,5 +1,5 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { Camera, AlertCircle, RotateCcw, User, XCircle, UserCheck, Calendar, Clock } from 'lucide-react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { Camera, AlertCircle, RotateCcw, User, XCircle, UserCheck, Calendar, Clock, Volume2 } from 'lucide-react';
 
 interface CaptureState {
   status: 'idle' | 'camera-active' | 'capturing' | 'sending' | 'success' | 'error' | 'user-found' | 'user-not-found' | 'no-face';
@@ -56,6 +56,8 @@ function App() {
     status: 'idle',
     message: ''
   });
+  const [isHelpActive, setIsHelpActive] = useState(false);
+  const [speechSynthesis, setSpeechSynthesis] = useState<SpeechSynthesis | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -195,6 +197,92 @@ function App() {
     stopCamera();
     setCaptureState({ status: 'idle', message: '' });
   }, [stopCamera]);
+
+  const speak = useCallback((text: string) => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'es-ES';
+      utterance.rate = 0.8;
+      utterance.volume = 0.9;
+      utterance.pitch = 1;
+      window.speechSynthesis.speak(utterance);
+    }
+  }, []);
+
+  const toggleHelp = useCallback(() => {
+    setIsHelpActive(!isHelpActive);
+    
+    if (isHelpActive) {
+      // If turning off help, cancel any ongoing speech
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    }
+    // Don't speak here anymore - let the useEffect handle it
+  }, [isHelpActive]);
+
+  const getHelpInstructions = useCallback(() => {
+    switch (captureState.status) {
+      case 'idle':
+        return "Bienvenido al Asistente de Rehabilitación. Para comenzar, busque y toque el botón azul que dice 'Activar Cámara' que está debajo. La aplicación necesita acceso a su cámara para reconocer su rostro y mostrarle sus horarios de actividades.";
+      
+      case 'camera-active':
+        return "¡Perfecto! La cámara está ahora activada y funcionando. Colóquese frente a la cámara para que pueda ver claramente su rostro en la pantalla. Cuando esté bien posicionado y listo, toque el botón verde que dice 'Tomar Foto'. Si prefiere cancelar, puede tocar el botón gris 'Cancelar'.";
+      
+      case 'capturing':
+        return "Tomando su fotografía ahora. Por favor, manténgase muy quieto durante unos segundos mientras capturamos y procesamos su imagen.";
+      
+      case 'sending':
+        return "Ahora estamos procesando su imagen para el reconocimiento facial. Este proceso puede tomar entre 10 y 30 segundos. Por favor, tenga paciencia.";
+      
+      case 'user-found':
+        return (() => {
+          const scheduleData = captureState.recognitionData?.scheduleData;
+          const currentContext = captureState.recognitionData?.currentContext;
+          const name = scheduleData?.Nombre || 'Usuario';
+          
+          let message = `¡Excelente ${name}! Le hemos reconocido correctamente. `;
+          
+          if (currentContext?.currentActivity) {
+            const activity = currentContext.currentActivity;
+            message += `Su actividad actual es: ${activity.description} a las ${activity.time}. `;
+          } else if (currentContext?.nextActivity) {
+            const activity = currentContext.nextActivity;
+            message += `Su próxima actividad es: ${activity.description} a las ${activity.time}. `;
+          }
+          
+          message += "En la pantalla puede ver toda su información del día, incluyendo horarios y salas asignadas. Para consultar otra vez o tomar una nueva foto, toque el botón 'Comenzar de Nuevo'.";
+          
+          return message;
+        })();
+      
+      case 'user-not-found':
+        return "No hemos podido encontrar su información en nuestro sistema de pacientes. Por favor, consulte con el personal del centro de rehabilitación para verificar su registro. Puede intentar tomar otra foto tocando el botón 'Comenzar de Nuevo'.";
+      
+      case 'no-face':
+        return "No hemos podido detectar claramente un rostro en la imagen. Por favor, asegúrese de estar bien posicionado frente a la cámara, que haya suficiente luz en el ambiente, y que no haya obstáculos tapando su cara. Toque 'Comenzar de Nuevo' para intentar otra vez.";
+      
+      case 'error':
+        return "Ha ocurrido un error técnico. Por favor, verifique que la cámara funcione correctamente, que tenga una buena conexión a internet, y que el navegador tenga permisos para usar la cámara. Toque 'Comenzar de Nuevo' para intentar otra vez.";
+      
+      default:
+        return "Sistema de reconocimiento facial para pacientes del centro de rehabilitación. Active la ayuda por voz tocando este botón cuando necesite instrucciones detalladas paso a paso.";
+    }
+  }, [captureState.status, captureState.recognitionData]);
+
+  // Effect to automatically provide voice guidance when state changes
+  useEffect(() => {
+    if (isHelpActive) {
+      const helpText = getHelpInstructions();
+      // Add a small delay to ensure the UI has updated
+      const timer = setTimeout(() => {
+        speak(helpText);
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [captureState.status, isHelpActive, getHelpInstructions, speak]);
 
   const getCurrentDay = () => {
     const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -353,6 +441,46 @@ function App() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-3 sm:p-6">
       <div className="max-w-4xl mx-auto">
+        {/* Accessibility Help Button - Fixed position at top */}
+        <div className="fixed top-4 right-4 z-50">
+          <button
+            onClick={toggleHelp}
+            className={`
+              ${isHelpActive 
+                ? 'bg-red-600 hover:bg-red-700 ring-4 ring-red-200' 
+                : 'bg-blue-600 hover:bg-blue-700 ring-2 ring-blue-200'
+              } 
+              text-white p-4 sm:p-5 rounded-full shadow-2xl 
+              transform transition-all duration-300 hover:scale-110 active:scale-95
+              flex items-center justify-center gap-2
+              focus:outline-none focus:ring-4 focus:ring-blue-300
+              min-w-[60px] min-h-[60px] sm:min-w-[70px] sm:min-h-[70px]
+            `}
+            aria-label={isHelpActive ? "Detener ayuda por voz" : "Activar ayuda por voz"}
+            title={isHelpActive ? "Detener ayuda por voz" : "Activar ayuda por voz"}
+          >
+            <Volume2 className={`w-6 h-6 sm:w-7 sm:h-7 ${isHelpActive ? 'animate-pulse' : ''}`} />
+            {isHelpActive && (
+              <div className="absolute -bottom-2 -right-2 w-4 h-4 bg-red-500 rounded-full animate-ping" />
+            )}
+          </button>
+          
+          {/* Help instructions tooltip */}
+          {isHelpActive && (
+            <div className="absolute top-full right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border-2 border-blue-200 p-4 text-sm text-gray-700">
+              <div className="flex items-center gap-2 mb-2">
+                <Volume2 className="w-4 h-4 text-blue-600" />
+                <span className="font-bold text-blue-800">Ayuda Activada</span>
+              </div>
+              <p className="leading-relaxed">
+                {getHelpInstructions()}
+              </p>
+              <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-500">
+                Toque el botón rojo para detener la ayuda por voz
+              </div>
+            </div>
+          )}
+        </div>
         {/* Header - Optimizado para móvil */}
         <div className="text-center mb-4 sm:mb-8">
           <div className="flex items-center justify-center mb-3 sm:mb-4">
